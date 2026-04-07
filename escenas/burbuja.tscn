@@ -1,0 +1,17 @@
+[gd_scene format=3 uid="uid://mndcy7iqiy1d"]
+
+[ext_resource type="Script" uid="uid://bt46f87sttew3" path="res://scripts/burbuja.gd" id="1_ka2ar"]
+[ext_resource type="Texture2D" uid="uid://dn14mu2fer8gf" path="res://assets/burbuja/bubble.png" id="2_ka2ar"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_ka2ar"]
+radius = 23.0
+
+[node name="Burbuja" type="CharacterBody2D" unique_id=812415674]
+script = ExtResource("1_ka2ar")
+
+[node name="SpriteBase" type="Sprite2D" parent="." unique_id=1380890933]
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("2_ka2ar")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=341136077]
+shape = SubResource("CircleShape2D_ka2ar")
