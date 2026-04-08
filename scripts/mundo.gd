@@ -2,12 +2,13 @@ extends Node2D
 
 # --- CONFIGURACIÓN ---
 @export var escena_burbuja: PackedScene
-@export var filas: int = 1
+@export var filas: int = 7
 @export var columnas: int = 30
 @export var diametro_burbuja: float = 64.0
 @export var velocidad_disparo: float = 1300.0
 @export var margen_top_ui: float = 50.0
 @export var margen_lateral_ui: float = 6.0
+@export var tiempo_maximo: float = 600
 
 # --- REFERENCIAS ---
 @onready var contenedor = $ContenedorBurbujas
@@ -21,7 +22,7 @@ extends Node2D
 @onready var label_score = $MonitorRendimiento/LabelScore
 @onready var label_timer = $MonitorRendimiento/LabelTimer 
 @onready var label_titulo_ui = $CapaUI/ColorRect/LabelTitulo
-@onready var contenedor_corazones = $MonitorRendimiento/ContenedorCorazones # <-- NUEVA REFERENCIA A LOS CORAZONES
+@onready var contenedor_corazones = $MonitorRendimiento/ContenedorCorazones 
 
 # --- VARIABLES DE ESTADO ---
 var burbuja_cargada: CharacterBody2D = null
@@ -29,7 +30,7 @@ var burbuja_siguiente: CharacterBody2D = null
 var colores = [0, 1, 2, 3, 4, 5] 
 var juego_activo: bool = true
 var puntaje: int = 0
-var tiempo_transcurrido: float = 0.0 
+var tiempo_restante: float = 0.0 # <-- AHORA ES TIEMPO RESTANTE
 
 # --- VARIABLES DE LÓGICA DE JUEGO ---
 var fallos_consecutivos: int = 0
@@ -45,15 +46,24 @@ func _ready():
 	var radio = diametro_burbuja / 2.0
 	var distancia_y = diametro_burbuja * 0.866
 	
+	tiempo_restante = tiempo_maximo # Arrancamos con el tanque lleno
+	
 	generar_nivel(radio, distancia_y)
 	preparar_proyectiles()
-	actualizar_ui_fallos() # Arrancamos llenando los corazones al inicio
+	actualizar_ui_fallos() 
 
 func _process(delta):
 	if not juego_activo: return 
 	
-	# --- ACTUALIZACIÓN DEL RELOJ ---
-	tiempo_transcurrido += delta
+	# --- ACTUALIZACIÓN DEL RELOJ EN REVERSA ---
+	tiempo_restante -= delta
+	
+	if tiempo_restante <= 0.0:
+		tiempo_restante = 0.0
+		actualizar_ui_timer()
+		animar_game_over() # Se acabó el tiempo, perdiste
+		return
+		
 	actualizar_ui_timer()
 	
 	dibujar_trayectoria() 
@@ -232,7 +242,6 @@ func explotar_coincidencias(burbuja_inicial):
 			b.remove_from_group("burbujas_fijas")
 			b.queue_free()
 		
-		# --- ACERTAMOS EL TIRO ---
 		fallos_consecutivos = 0
 		actualizar_ui_fallos()
 		
@@ -244,7 +253,6 @@ func explotar_coincidencias(burbuja_inicial):
 			revisar_colores_proyectiles()
 			
 	else:
-		# --- FALLAMOS EL TIRO ---
 		fallos_consecutivos += 1
 		actualizar_ui_fallos()
 		
@@ -338,23 +346,27 @@ func agregar_nueva_fila_superior():
 # ==========================================
 
 func actualizar_ui_timer():
-	var minutos: int = int(tiempo_transcurrido / 60)
-	var segundos: int = int(tiempo_transcurrido) % 60
+	var minutos: int = int(tiempo_restante / 60)
+	var segundos: int = int(tiempo_restante) % 60
 	
 	if label_timer: 
 		label_timer.text = "TIME: %02d:%02d" % [minutos, segundos]
+		
+		# Efecto de pánico visual: Si quedan menos de 10 segundos, el reloj se pone rojo
+		if tiempo_restante <= 10.0:
+			label_timer.modulate = Color.RED
+		else:
+			label_timer.modulate = Color.WHITE
 
 func actualizar_ui_fallos():
 	if contenedor_corazones:
 		var restantes = MAX_FALLOS - fallos_consecutivos
-		var corazones = contenedor_corazones.get_children() # Agarramos los 3 TextureRect
+		var corazones = contenedor_corazones.get_children() 
 		
 		for i in range(corazones.size()):
 			if i < restantes:
-				# Vida activa: Color normal
 				corazones[i].modulate = Color.WHITE 
 			else:
-				# Vida gastada: Gris oscuro y semi-transparente
 				corazones[i].modulate = Color(0.3, 0.3, 0.3, 0.5)
 
 func sumar_puntos(cantidad: int):
@@ -395,11 +407,20 @@ func animar_victoria():
 	burbuja_cargada.hide()
 	burbuja_siguiente.hide()
 	
+	# --- CÁLCULO DEL BONO DE TIEMPO ---
+	# Por cada segundo que te sobre, te damos 10 puntos extra (podés cambiar el 10)
+	var puntos_bonus = int(tiempo_restante) * 10 
+	sumar_puntos(puntos_bonus)
+	
+	# Tiramos un texto flotante grandote justo donde está el reloj para que se entienda el bonus
+	if label_timer:
+		mostrar_texto_flotante(label_timer.global_position + Vector2(50, 50), "TIME BONUS! +" + str(puntos_bonus), Color.GOLD)
+	
 	if label_titulo_ui:
 		label_titulo_ui.text = "¡GANASTE!"
 		label_titulo_ui.modulate = Color.GREEN
 		
-	await get_tree().create_timer(0.5).timeout
+	await get_tree().create_timer(1.0).timeout # Esperamos 1 seg para que el jugador vea el bonus entrar
 	capa_ui.show()
 	linea_guia.hide()
 
@@ -409,7 +430,11 @@ func animar_game_over():
 	burbuja_siguiente.hide()
 	
 	if label_titulo_ui:
-		label_titulo_ui.text = "FIN DEL JUEGO"
+		if tiempo_restante <= 0.0:
+			label_titulo_ui.text = "¡TIEMPO AGOTADO!"
+		else:
+			label_titulo_ui.text = "FIN DEL JUEGO"
+			
 		label_titulo_ui.modulate = Color.RED 
 	
 	var vivas = get_tree().get_nodes_in_group("burbujas_fijas")
