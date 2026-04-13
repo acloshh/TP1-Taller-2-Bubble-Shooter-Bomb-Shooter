@@ -2,13 +2,13 @@ extends Node2D
 
 # --- CONFIGURACIÓN ---
 @export var escena_burbuja: PackedScene
-@export var filas: int = 7
+@export var filas: int = 2
 @export var columnas: int = 30
 @export var diametro_burbuja: float = 64.0
 @export var velocidad_disparo: float = 1300.0
 @export var margen_top_ui: float = 50.0
 @export var margen_lateral_ui: float = 6.0
-@export var tiempo_maximo: float = 600
+@export var tiempo_maximo: float = 1800000
 
 # --- REFERENCIAS ---
 @onready var contenedor = $ContenedorBurbujas
@@ -24,13 +24,22 @@ extends Node2D
 @onready var label_titulo_ui = $CapaUI/ColorRect/LabelTitulo
 @onready var contenedor_corazones = $MonitorRendimiento/ContenedorCorazones 
 
+# --- REFERENCIAS DEL LEADERBOARD ---
+@onready var input_nombre = $CapaUI/ColorRect/InputNombre
+@onready var boton_guardar = $CapaUI/ColorRect/BotonGuardar
+@onready var label_leaderboard = $CapaUI/ColorRect/LabelLeaderboard
+
 # --- VARIABLES DE ESTADO ---
 var burbuja_cargada: CharacterBody2D = null
 var burbuja_siguiente: CharacterBody2D = null
 var colores = [0, 1, 2, 3, 4, 5] 
 var juego_activo: bool = true
 var puntaje: int = 0
-var tiempo_restante: float = 0.0 # <-- AHORA ES TIEMPO RESTANTE
+var tiempo_restante: float = 0.0 
+
+# --- LEADERBOARD CONFIG ---
+const ARCHIVO_LEADERBOARD = "user://top_scores.json"
+var puntajes_guardados = []
 
 # --- VARIABLES DE LÓGICA DE JUEGO ---
 var fallos_consecutivos: int = 0
@@ -46,7 +55,16 @@ func _ready():
 	var radio = diametro_burbuja / 2.0
 	var distancia_y = diametro_burbuja * 0.866
 	
-	tiempo_restante = tiempo_maximo # Arrancamos con el tanque lleno
+	tiempo_restante = tiempo_maximo 
+	
+	# Preparamos la UI del final ocultando cosas
+	if input_nombre: input_nombre.hide()
+	if boton_guardar: 
+		boton_guardar.hide()
+		boton_guardar.pressed.connect(_on_boton_guardar_pressed) # Conectamos el botón por código
+	if label_leaderboard: label_leaderboard.hide()
+	
+	cargar_leaderboard() # Cargamos los puntajes viejos de la PC
 	
 	generar_nivel(radio, distancia_y)
 	preparar_proyectiles()
@@ -55,17 +73,15 @@ func _ready():
 func _process(delta):
 	if not juego_activo: return 
 	
-	# --- ACTUALIZACIÓN DEL RELOJ EN REVERSA ---
 	tiempo_restante -= delta
 	
 	if tiempo_restante <= 0.0:
 		tiempo_restante = 0.0
 		actualizar_ui_timer()
-		animar_game_over() # Se acabó el tiempo, perdiste
+		animar_game_over() 
 		return
 		
 	actualizar_ui_timer()
-	
 	dibujar_trayectoria() 
 	
 	if Input.is_action_just_pressed("click_izquierdo"):
@@ -87,10 +103,8 @@ func generar_nivel(radio: float, dist_y: float):
 		for c in range(num_columnas):
 			var b = escena_burbuja.instantiate()
 			contenedor.add_child(b)
-			
 			var pos_x = (c * diametro_burbuja) + offset_x + radio + margen_lateral_ui
 			b.position = Vector2(pos_x, (f * dist_y) + radio + margen_top_ui)
-			
 			b.asignar_color(colores.pick_random())
 			b.set_physics_process(false)
 			b.add_to_group("burbujas_fijas")
@@ -115,10 +129,8 @@ func crear_burbuja_en_marcador(marcador: Marker2D) -> CharacterBody2D:
 
 func disparar():
 	if !burbuja_cargada: return
-	
 	var proyectil = burbuja_cargada
 	var pos_inicio = proyectil.global_position
-	
 	pos_carga.remove_child(proyectil)
 	add_child(proyectil) 
 	proyectil.global_position = pos_inicio
@@ -126,19 +138,16 @@ func disparar():
 	var direccion = (get_global_mouse_position() - pos_inicio).normalized()
 	proyectil.velocity = direccion * velocidad_disparo
 	proyectil.set_physics_process(true)
-	
 	proyectil.get_node("CollisionShape2D").disabled = false
 	
 	burbuja_cargada = burbuja_siguiente
 	pos_siguiente.remove_child(burbuja_cargada)
 	pos_carga.add_child(burbuja_cargada)
 	burbuja_cargada.position = Vector2.ZERO
-	
 	burbuja_siguiente = crear_burbuja_en_marcador(pos_siguiente)
 
 func hacer_swap():
 	if !burbuja_cargada or !burbuja_siguiente: return
-	
 	var color_temp = burbuja_cargada.mi_color
 	burbuja_cargada.asignar_color(burbuja_siguiente.mi_color)
 	burbuja_siguiente.asignar_color(color_temp)
@@ -149,7 +158,6 @@ func dibujar_trayectoria():
 	
 	var pos_inicio = pos_carga.global_position
 	var direccion = (get_global_mouse_position() - pos_inicio).normalized()
-	
 	linea_guia.add_point(pos_inicio)
 	
 	var espacio = get_world_2d().direct_space_state
@@ -191,14 +199,11 @@ func encastrar_y_evaluar(burbuja):
 	
 	var es_impar = ((techo_es_impar as int + fila_absoluta) % 2) != 0
 	var offset_x = radio if es_impar else 0.0
-	
 	var columna = int(round((burbuja.position.x - offset_x - radio - margen_lateral_ui) / diametro_burbuja))
 	
 	var max_columnas_en_esta_fila = (columnas - 1) if es_impar else columnas
-	if columna < 0: 
-		columna = 0 
-	elif columna >= max_columnas_en_esta_fila: 
-		columna = max_columnas_en_esta_fila - 1 
+	if columna < 0: columna = 0 
+	elif columna >= max_columnas_en_esta_fila: columna = max_columnas_en_esta_fila - 1 
 	
 	var pos_final_x = (columna * diametro_burbuja) + offset_x + radio + margen_lateral_ui
 	burbuja.position = Vector2(pos_final_x, (fila_absoluta * dist_y) + pos_y_fila_cero)
@@ -233,10 +238,8 @@ func explotar_coincidencias(burbuja_inicial):
 		
 		for i in range(array_conectadas.size()):
 			var b = array_conectadas[i]
-			if i == 0:
-				mostrar_texto_flotante(b.global_position, "+50", Color.YELLOW)
-			elif i >= 3:
-				mostrar_texto_flotante(b.global_position, "+25", Color.CYAN)
+			if i == 0: mostrar_texto_flotante(b.global_position, "+50", Color.YELLOW)
+			elif i >= 3: mostrar_texto_flotante(b.global_position, "+25", Color.CYAN)
 		
 		for b in array_conectadas:
 			b.remove_from_group("burbujas_fijas")
@@ -244,18 +247,15 @@ func explotar_coincidencias(burbuja_inicial):
 		
 		fallos_consecutivos = 0
 		actualizar_ui_fallos()
-		
 		limpiar_huerfanas()
 		
 		if get_tree().get_nodes_in_group("burbujas_fijas").size() == 0:
 			animar_victoria()
 		else:
 			revisar_colores_proyectiles()
-			
 	else:
 		fallos_consecutivos += 1
 		actualizar_ui_fallos()
-		
 		if fallos_consecutivos >= MAX_FALLOS:
 			agregar_nueva_fila_superior()
 			fallos_consecutivos = 0 
@@ -264,10 +264,8 @@ func explotar_coincidencias(burbuja_inicial):
 func limpiar_huerfanas():
 	var vivas = get_tree().get_nodes_in_group("burbujas_fijas")
 	if vivas.size() == 0: return
-
 	var conectadas_al_techo = {}
 	var a_revisar = []
-	
 	var radio = diametro_burbuja / 2.0
 	var pos_y_fila_cero = radio + margen_top_ui
 
@@ -288,21 +286,15 @@ func limpiar_huerfanas():
 					a_revisar.append(otra)
 
 	for b in vivas:
-		if not conectadas_al_techo.has(b):
-			hacer_caer(b)
+		if not conectadas_al_techo.has(b): hacer_caer(b)
 
 func hacer_caer(burbuja):
 	sumar_puntos(20) 
 	mostrar_texto_flotante(burbuja.global_position, "+20", Color.GREEN)
-	
 	burbuja.remove_from_group("burbujas_fijas")
 	burbuja.get_node("CollisionShape2D").set_deferred("disabled", true)
-	
 	var tween = create_tween()
-	tween.tween_property(burbuja, "global_position", burbuja.global_position + Vector2(0, 800), 1.0)\
-		.set_ease(Tween.EASE_IN)\
-		.set_trans(Tween.TRANS_QUAD)
-		
+	tween.tween_property(burbuja, "global_position", burbuja.global_position + Vector2(0, 800), 1.0).set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
 	tween.tween_callback(burbuja.queue_free)
 
 func agregar_nueva_fila_superior():
@@ -310,20 +302,17 @@ func agregar_nueva_fila_superior():
 	var radio = diametro_burbuja / 2.0
 	var todas = get_tree().get_nodes_in_group("burbujas_fijas")
 	
-	for b in todas:
-		b.position.y += dist_y
+	for b in todas: b.position.y += dist_y
 
 	techo_es_impar = !techo_es_impar
 	var num_columnas = columnas - 1 if techo_es_impar else columnas
 	var offset_x = radio if techo_es_impar else 0.0
 	
 	var colores_validos = []
-	if todas.size() == 0:
-		colores_validos = colores 
+	if todas.size() == 0: colores_validos = colores 
 	else:
 		var diccionario = {}
-		for b in todas:
-			diccionario[b.mi_color] = true
+		for b in todas: diccionario[b.mi_color] = true
 		colores_validos = diccionario.keys()
 	
 	for c in range(num_columnas):
@@ -348,31 +337,22 @@ func agregar_nueva_fila_superior():
 func actualizar_ui_timer():
 	var minutos: int = int(tiempo_restante / 60)
 	var segundos: int = int(tiempo_restante) % 60
-	
 	if label_timer: 
 		label_timer.text = "TIME: %02d:%02d" % [minutos, segundos]
-		
-		# Efecto de pánico visual: Si quedan menos de 10 segundos, el reloj se pone rojo
-		if tiempo_restante <= 10.0:
-			label_timer.modulate = Color.RED
-		else:
-			label_timer.modulate = Color.WHITE
+		if tiempo_restante <= 10.0: label_timer.modulate = Color.RED
+		else: label_timer.modulate = Color.WHITE
 
 func actualizar_ui_fallos():
 	if contenedor_corazones:
 		var restantes = MAX_FALLOS - fallos_consecutivos
 		var corazones = contenedor_corazones.get_children() 
-		
 		for i in range(corazones.size()):
-			if i < restantes:
-				corazones[i].modulate = Color.WHITE 
-			else:
-				corazones[i].modulate = Color(0.3, 0.3, 0.3, 0.5)
+			if i < restantes: corazones[i].modulate = Color.WHITE 
+			else: corazones[i].modulate = Color(0.3, 0.3, 0.3, 0.5)
 
 func sumar_puntos(cantidad: int):
 	puntaje += cantidad
 	label_score.text = "SCORE: " + str(puntaje)
-	
 	var tween = create_tween() 
 	tween.tween_property(label_score, "scale", Vector2(1.5, 1.5), 0.1)
 	tween.tween_property(label_score, "scale", Vector2(1.0, 1.0), 0.15)
@@ -380,47 +360,145 @@ func sumar_puntos(cantidad: int):
 func mostrar_texto_flotante(posicion: Vector2, texto: String, color_texto: Color):
 	var label = Label.new()
 	label.text = texto
-	
 	label.add_theme_font_size_override("font_size", 28)
 	label.add_theme_color_override("font_outline_color", Color.BLACK)
 	label.add_theme_constant_override("outline_size", 6)
 	label.modulate = color_texto
-	
 	label.position = posicion - Vector2(25, 20)
 	label.z_index = 50
-	
 	add_child(label)
 	
 	var tween = create_tween()
 	tween.set_parallel(true) 
-	
-	tween.tween_property(label, "position", label.position - Vector2(0, 60), 1.0)\
-		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
-		
-	tween.tween_property(label, "modulate:a", 0.0, 1.0)\
-		.set_ease(Tween.EASE_IN)
-	
+	tween.tween_property(label, "position", label.position - Vector2(0, 60), 1.0).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+	tween.tween_property(label, "modulate:a", 0.0, 1.0).set_ease(Tween.EASE_IN)
 	tween.chain().tween_callback(label.queue_free)
+
+func revisar_colores_proyectiles():
+	var vivas = get_tree().get_nodes_in_group("burbujas_fijas")
+	if vivas.size() == 0: return
+	var colores_presentes = {}
+	for b in vivas: colores_presentes[b.mi_color] = true
+	var colores_validos = colores_presentes.keys()
+	if burbuja_cargada and not colores_presentes.has(burbuja_cargada.mi_color):
+		burbuja_cargada.asignar_color(colores_validos.pick_random())
+	if burbuja_siguiente and not colores_presentes.has(burbuja_siguiente.mi_color):
+		burbuja_siguiente.asignar_color(colores_validos.pick_random())
+
+func obtener_color_valido() -> int:
+	var vivas = get_tree().get_nodes_in_group("burbujas_fijas")
+	if vivas.size() == 0: return colores.pick_random()
+	var colores_presentes = {}
+	for b in vivas: colores_presentes[b.mi_color] = true
+	return colores_presentes.keys().pick_random()
+
+func _on_button_pressed() -> void:
+	get_tree().reload_current_scene()
+
+
+# ==========================================
+# LEADERBOARD Y FIN DE PARTIDA
+# ==========================================
+
+func cargar_leaderboard():
+	if FileAccess.file_exists(ARCHIVO_LEADERBOARD):
+		var archivo = FileAccess.open(ARCHIVO_LEADERBOARD, FileAccess.READ)
+		var json_texto = archivo.get_as_text()
+		var json = JSON.new()
+		var error = json.parse(json_texto)
+		if error == OK:
+			puntajes_guardados = json.data
+		archivo.close()
+
+func guardar_leaderboard():
+	var archivo = FileAccess.open(ARCHIVO_LEADERBOARD, FileAccess.WRITE)
+	var json_string = JSON.stringify(puntajes_guardados)
+	archivo.store_string(json_string)
+	archivo.close()
+
+func mostrar_ui_leaderboard():
+	var texto_final = "TOP 5 JUGADORES\n\n"
+	for i in range(puntajes_guardados.size()):
+		var p = puntajes_guardados[i]
+		# Formato: 1. [Nombre] - 500 Pts (01:20s) - Fecha
+		texto_final += str(i+1) + ". " + str(p["nombre"]) + " | " + str(p["score"]) + " PTS | T: " + str(p["tiempo"]) + "s | " + str(p["fecha"]) + "\n"
+	
+	if label_leaderboard:
+		label_leaderboard.text = texto_final
+		label_leaderboard.show()
+
+func _on_boton_guardar_pressed():
+	var nombre = input_nombre.text.strip_edges()
+	if nombre == "": nombre = "Anónimo"
+	
+	var tiempo_usado = int(tiempo_maximo - tiempo_restante)
+	var fecha_dic = Time.get_datetime_dict_from_system()
+	
+	# --- NUEVO FORMATO DE FECHA (DD/MM/YYYY) ---
+	var dia = "%02d" % fecha_dic.day
+	var mes = "%02d" % fecha_dic.month
+	var anio = str(fecha_dic.year)
+	
+	# --- NUEVO FORMATO DE HORA (12HS AM/PM) ---
+	var hora_24 = fecha_dic.hour
+	var minuto = "%02d" % fecha_dic.minute
+	var am_pm = "AM"
+	var hora_12 = hora_24
+	
+	if hora_24 >= 12:
+		am_pm = "PM"
+		if hora_24 > 12:
+			hora_12 -= 12
+	if hora_12 == 0:
+		hora_12 = 12
+		
+	var hora_str = "%02d" % hora_12
+	var fecha_str = dia + "/" + mes + "/" + anio + " " + hora_str + ":" + minuto + " " + am_pm
+	
+	# Guardamos en la lista
+	puntajes_guardados.append({
+		"nombre": nombre,
+		"score": puntaje,
+		"tiempo": tiempo_usado,
+		"fecha": fecha_str
+	})
+	
+	# Ordenamos: Primero por Score más alto. Si empatan, por menos Tiempo.
+	puntajes_guardados.sort_custom(func(a, b): 
+		if a.score != b.score: return a.score > b.score
+		return a.tiempo < b.tiempo
+	)
+	
+	# Solo guardamos el Top 5
+	if puntajes_guardados.size() > 5: puntajes_guardados.resize(5)
+	
+	guardar_leaderboard()
+	
+	input_nombre.hide()
+	boton_guardar.hide()
+	mostrar_ui_leaderboard()
+	boton_reintentar.show()
 
 func animar_victoria():
 	juego_activo = false 
 	burbuja_cargada.hide()
 	burbuja_siguiente.hide()
 	
-	# --- CÁLCULO DEL BONO DE TIEMPO ---
-	# Por cada segundo que te sobre, te damos 10 puntos extra (podés cambiar el 10)
 	var puntos_bonus = int(tiempo_restante) * 10 
 	sumar_puntos(puntos_bonus)
-	
-	# Tiramos un texto flotante grandote justo donde está el reloj para que se entienda el bonus
-	if label_timer:
-		mostrar_texto_flotante(label_timer.global_position + Vector2(50, 50), "TIME BONUS! +" + str(puntos_bonus), Color.GOLD)
+	if label_timer: mostrar_texto_flotante(label_timer.global_position + Vector2(50, 50), "TIME BONUS! +" + str(puntos_bonus), Color.GOLD)
 	
 	if label_titulo_ui:
 		label_titulo_ui.text = "¡GANASTE!"
 		label_titulo_ui.modulate = Color.GREEN
 		
-	await get_tree().create_timer(1.0).timeout # Esperamos 1 seg para que el jugador vea el bonus entrar
+	await get_tree().create_timer(1.0).timeout 
+	
+	# Mostramos caja de texto para poner el nombre (Escondemos Reintentar)
+	if input_nombre: input_nombre.show()
+	if boton_guardar: boton_guardar.show()
+	if boton_reintentar: boton_reintentar.hide()
+	
 	capa_ui.show()
 	linea_guia.hide()
 
@@ -430,11 +508,8 @@ func animar_game_over():
 	burbuja_siguiente.hide()
 	
 	if label_titulo_ui:
-		if tiempo_restante <= 0.0:
-			label_titulo_ui.text = "¡TIEMPO AGOTADO!"
-		else:
-			label_titulo_ui.text = "FIN DEL JUEGO"
-			
+		if tiempo_restante <= 0.0: label_titulo_ui.text = "¡TIEMPO AGOTADO!"
+		else: label_titulo_ui.text = "FIN DEL JUEGO"
 		label_titulo_ui.modulate = Color.RED 
 	
 	var vivas = get_tree().get_nodes_in_group("burbujas_fijas")
@@ -449,36 +524,8 @@ func animar_game_over():
 			b.modulate = Color(0.3, 0.3, 0.3)
 		
 	await get_tree().create_timer(0.5).timeout
+	
+	# Como perdió, no lo dejamos escribir el nombre. Le mostramos directo los puntajes
+	mostrar_ui_leaderboard()
 	capa_ui.show()
 	linea_guia.hide()
-
-func revisar_colores_proyectiles():
-	var vivas = get_tree().get_nodes_in_group("burbujas_fijas")
-	if vivas.size() == 0: return
-
-	var colores_presentes = {}
-	for b in vivas:
-		colores_presentes[b.mi_color] = true
-	
-	var colores_validos = colores_presentes.keys()
-
-	if burbuja_cargada and not colores_presentes.has(burbuja_cargada.mi_color):
-		burbuja_cargada.asignar_color(colores_validos.pick_random())
-
-	if burbuja_siguiente and not colores_presentes.has(burbuja_siguiente.mi_color):
-		burbuja_siguiente.asignar_color(colores_validos.pick_random())
-
-func obtener_color_valido() -> int:
-	var vivas = get_tree().get_nodes_in_group("burbujas_fijas")
-	if vivas.size() == 0:
-		return colores.pick_random()
-		
-	var colores_presentes = {}
-	for b in vivas:
-		colores_presentes[b.mi_color] = true
-		
-	var lista_final = colores_presentes.keys()
-	return lista_final.pick_random()
-
-func _on_button_pressed() -> void:
-	get_tree().reload_current_scene()

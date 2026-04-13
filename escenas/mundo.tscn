@@ -85,12 +85,37 @@ theme_override_font_sizes/font_size = 38
 
 [node name="Button" type="Button" parent="CapaUI/ColorRect" unique_id=900330344]
 layout_mode = 0
-offset_left = 917.0
-offset_top = 564.0
-offset_right = 1070.0
-offset_bottom = 606.0
+offset_left = 884.0
+offset_top = 697.0
+offset_right = 1037.0
+offset_bottom = 739.0
 theme_override_font_sizes/font_size = 24
 text = "REINTENTAR"
+
+[node name="InputNombre" type="LineEdit" parent="CapaUI/ColorRect" unique_id=1722946220]
+layout_mode = 0
+offset_left = 849.0
+offset_top = 550.0
+offset_right = 1076.0
+offset_bottom = 592.0
+theme_override_font_sizes/font_size = 24
+placeholder_text = "Escribe tu nombre..."
+
+[node name="BotonGuardar" type="Button" parent="CapaUI/ColorRect" unique_id=1219524316]
+layout_mode = 0
+offset_left = 864.0
+offset_top = 622.0
+offset_right = 1064.0
+offset_bottom = 664.0
+theme_override_font_sizes/font_size = 24
+text = "Guardar puntaje"
+
+[node name="LabelLeaderboard" type="Label" parent="CapaUI/ColorRect" unique_id=1689625471]
+layout_mode = 0
+offset_left = 1114.0
+offset_top = 220.0
+offset_right = 1784.0
+offset_bottom = 1018.0
 
 [node name="LineaGuia" type="Line2D" parent="." unique_id=427499844]
 z_index = 1
