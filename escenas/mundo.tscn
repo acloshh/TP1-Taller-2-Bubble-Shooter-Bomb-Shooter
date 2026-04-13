@@ -3,8 +3,11 @@
 [ext_resource type="Script" uid="uid://bm8wfj25cvsmx" path="res://scripts/mundo.gd" id="1_cdbbl"]
 [ext_resource type="PackedScene" uid="uid://mndcy7iqiy1d" path="res://escenas/burbuja.tscn" id="2_6wjgb"]
 [ext_resource type="Texture2D" uid="uid://b38hy0g01ix17" path="res://assets/tirador/tirador.png" id="3_glrvs"]
+[ext_resource type="Texture2D" uid="uid://dasc28abulor7" path="res://assets/background/Fondo.png" id="4_4vydk"]
+[ext_resource type="FontFile" uid="uid://b4ppkgqr8umxq" path="res://fonts/PirataOne-Regular.ttf" id="5_4vydk"]
 [ext_resource type="Texture2D" uid="uid://b8dx2jiwdumcc" path="res://assets/corazones/corazon lleno.png" id="5_7oex1"]
 [ext_resource type="Script" uid="uid://b7crov12fcqm2" path="res://scripts/recursos.gd" id="5_16hu1"]
+[ext_resource type="Texture2D" uid="uid://cf4mj7b8a4sy5" path="res://assets/background/Final.png" id="5_txhqv"]
 
 [sub_resource type="PhysicsMaterial" id="PhysicsMaterial_glrvs"]
 bounce = 0.64
@@ -20,14 +23,11 @@ script = ExtResource("1_cdbbl")
 escena_burbuja = ExtResource("2_6wjgb")
 metadata/_edit_horizontal_guides_ = [50.0, 0.0]
 
-[node name="Fuego" type="VideoStreamPlayer" parent="." unique_id=943453011]
-visible = false
+[node name="Fuego" type="TextureRect" parent="." unique_id=1203357326]
 offset_right = 1920.0
 offset_bottom = 1080.0
-speed_scale = 2.084
-autoplay = true
-expand = true
-loop = true
+texture = ExtResource("4_4vydk")
+expand_mode = 1
 
 [node name="ContenedorBurbujas" type="Node2D" parent="." unique_id=803860091]
 
@@ -48,7 +48,7 @@ position = Vector2(57, 0)
 physics_material_override = SubResource("PhysicsMaterial_glrvs")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="techo" unique_id=669423928 groups=["techo"]]
-position = Vector2(961.5, 40)
+position = Vector2(960, 40)
 shape = SubResource("RectangleShape2D_v12yk")
 
 [node name="ParedIzq" type="StaticBody2D" parent="." unique_id=1001348260 groups=["paredes"]]
@@ -62,60 +62,92 @@ position = Vector2(1924, 535)
 shape = SubResource("RectangleShape2D_glrvs")
 
 [node name="LineaDerrota" type="ColorRect" parent="." unique_id=1957760419]
-offset_left = 3.0
+offset_left = 1.0
 offset_top = 839.0
-offset_right = 1917.0
+offset_right = 1915.0
 offset_bottom = 840.0
+color = Color(0, 0, 0, 1)
 
 [node name="CapaUI" type="CanvasLayer" parent="." unique_id=505261560]
 visible = false
 
-[node name="ColorRect" type="ColorRect" parent="CapaUI" unique_id=986874281]
-offset_right = 1941.0
-offset_bottom = 1085.0
-color = Color(0.5286155, 0.51713336, 0.52835184, 1)
+[node name="ColorRect" type="TextureRect" parent="CapaUI" unique_id=874152623]
+offset_left = -12.0
+offset_top = -5.0
+offset_right = 1929.0
+offset_bottom = 1080.0
+texture = ExtResource("5_txhqv")
 
 [node name="LabelTitulo" type="Label" parent="CapaUI/ColorRect" unique_id=398401554]
-layout_mode = 0
-offset_left = 864.0
-offset_top = 455.0
-offset_right = 1092.0
-offset_bottom = 508.0
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -114.0
+offset_top = -250.5
+offset_right = 114.0
+offset_bottom = -197.5
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_colors/font_color = Color(9.939e-06, 0.6282049, 0.1084281, 1)
+theme_override_fonts/font = ExtResource("5_4vydk")
 theme_override_font_sizes/font_size = 38
+horizontal_alignment = 1
+vertical_alignment = 1
 
 [node name="Button" type="Button" parent="CapaUI/ColorRect" unique_id=900330344]
-layout_mode = 0
-offset_left = 884.0
-offset_top = 697.0
-offset_right = 1037.0
-offset_bottom = 739.0
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -76.5
+offset_top = 712.0
+offset_right = 76.5
+offset_bottom = 754.0
+grow_horizontal = 2
+theme_override_fonts/font = ExtResource("5_4vydk")
 theme_override_font_sizes/font_size = 24
 text = "REINTENTAR"
 
 [node name="InputNombre" type="LineEdit" parent="CapaUI/ColorRect" unique_id=1722946220]
-layout_mode = 0
-offset_left = 849.0
-offset_top = 550.0
-offset_right = 1076.0
-offset_bottom = 592.0
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -113.5
+offset_top = 520.0
+offset_right = 113.5
+offset_bottom = 562.0
+grow_horizontal = 2
+theme_override_fonts/font = ExtResource("5_4vydk")
 theme_override_font_sizes/font_size = 24
 placeholder_text = "Escribe tu nombre..."
 
 [node name="BotonGuardar" type="Button" parent="CapaUI/ColorRect" unique_id=1219524316]
-layout_mode = 0
-offset_left = 864.0
-offset_top = 622.0
-offset_right = 1064.0
-offset_bottom = 664.0
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -71.5
+offset_top = 568.0
+offset_right = 71.5
+offset_bottom = 608.0
+grow_horizontal = 2
+theme_override_fonts/font = ExtResource("5_4vydk")
 theme_override_font_sizes/font_size = 24
 text = "Guardar puntaje"
 
 [node name="LabelLeaderboard" type="Label" parent="CapaUI/ColorRect" unique_id=1689625471]
 layout_mode = 0
-offset_left = 1114.0
-offset_top = 220.0
-offset_right = 1784.0
-offset_bottom = 1018.0
+offset_left = 695.0
+offset_top = 358.0
+offset_right = 1365.0
+offset_bottom = 800.0
+theme_override_colors/font_color = Color(0, 0, 0, 1)
+theme_override_fonts/font = ExtResource("5_4vydk")
+theme_override_font_sizes/font_size = 34
 
 [node name="LineaGuia" type="Line2D" parent="." unique_id=427499844]
 z_index = 1
@@ -125,15 +157,15 @@ default_color = Color(1, 1, 1, 0.7176471)
 [node name="MonitorRendimiento" type="CanvasLayer" parent="." unique_id=2038924762]
 
 [node name="Tope" type="ColorRect" parent="MonitorRendimiento" unique_id=597404320]
-offset_right = 1921.0
+offset_right = 1920.0
 offset_bottom = 50.0
-color = Color(1, 1, 1, 0.2)
+color = Color(0.68235296, 0.61960787, 0.42352942, 1)
 
 [node name="ContenedorCorazones" type="HBoxContainer" parent="MonitorRendimiento" unique_id=720221421]
-offset_left = 480.0
-offset_top = -5.0
-offset_right = 680.0
-offset_bottom = 59.0
+offset_left = 888.0
+offset_top = -2.0
+offset_right = 1032.0
+offset_bottom = 62.0
 theme_override_constants/separation = -24
 
 [node name="TextureRect" type="TextureRect" parent="MonitorRendimiento/ContenedorCorazones" unique_id=40282875]
@@ -156,23 +188,30 @@ expand_mode = 2
 stretch_mode = 4
 
 [node name="Recursos" type="Label" parent="MonitorRendimiento" unique_id=374991014]
+visible = false
 offset_right = 40.0
 offset_bottom = 23.0
 script = ExtResource("5_16hu1")
 
 [node name="LabelScore" type="Label" parent="MonitorRendimiento" unique_id=765659140]
-offset_left = 1695.0
-offset_right = 1831.0
-offset_bottom = 50.0
+offset_left = 1647.0
+offset_top = 5.0
+offset_right = 1832.0
+offset_bottom = 55.0
 pivot_offset = Vector2(30.5, 11.5)
+theme_override_colors/font_color = Color(0, 0, 0, 1)
+theme_override_fonts/font = ExtResource("5_4vydk")
 theme_override_font_sizes/font_size = 36
-text = "Score: 0"
+text = "PUNTOS: 0"
 
 [node name="LabelTimer" type="Label" parent="MonitorRendimiento" unique_id=567662642]
-offset_left = 865.0
-offset_right = 1001.0
-offset_bottom = 50.0
+offset_left = 41.0
+offset_top = 5.0
+offset_right = 177.0
+offset_bottom = 55.0
 pivot_offset = Vector2(30.5, 11.5)
+theme_override_colors/font_color = Color(0, 0, 0, 1)
+theme_override_fonts/font = ExtResource("5_4vydk")
 theme_override_font_sizes/font_size = 36
 
 [connection signal="pressed" from="CapaUI/ColorRect/Button" to="." method="_on_button_pressed"]

@@ -2,13 +2,13 @@ extends Node2D
 
 # --- CONFIGURACIÓN ---
 @export var escena_burbuja: PackedScene
-@export var filas: int = 2
+@export var filas: int = 0
 @export var columnas: int = 30
 @export var diametro_burbuja: float = 64.0
 @export var velocidad_disparo: float = 1300.0
 @export var margen_top_ui: float = 50.0
 @export var margen_lateral_ui: float = 6.0
-@export var tiempo_maximo: float = 1800000
+@export var tiempo_maximo: float = 600
 
 # --- REFERENCIAS ---
 @onready var contenedor = $ContenedorBurbujas
@@ -57,14 +57,14 @@ func _ready():
 	
 	tiempo_restante = tiempo_maximo 
 	
-	# Preparamos la UI del final ocultando cosas
 	if input_nombre: input_nombre.hide()
 	if boton_guardar: 
 		boton_guardar.hide()
-		boton_guardar.pressed.connect(_on_boton_guardar_pressed) # Conectamos el botón por código
+		if not boton_guardar.pressed.is_connected(_on_boton_guardar_pressed):
+			boton_guardar.pressed.connect(_on_boton_guardar_pressed)
 	if label_leaderboard: label_leaderboard.hide()
 	
-	cargar_leaderboard() # Cargamos los puntajes viejos de la PC
+	cargar_leaderboard()
 	
 	generar_nivel(radio, distancia_y)
 	preparar_proyectiles()
@@ -91,7 +91,7 @@ func _process(delta):
 
 
 # ==========================================
-# INICIALIZACIÓN
+# INICIALIZACIÓN (Sin cambios)
 # ==========================================
 
 func generar_nivel(radio: float, dist_y: float):
@@ -186,13 +186,12 @@ func dibujar_trayectoria():
 
 
 # ==========================================
-# LÓGICA DE FÍSICAS Y TABLERO
+# LÓGICA DE FÍSICAS (Sin cambios)
 # ==========================================
 
 func encastrar_y_evaluar(burbuja):
 	var radio = diametro_burbuja / 2.0
 	var dist_y = diametro_burbuja * 0.866
-	
 	var pos_y_fila_cero = radio + margen_top_ui 
 	var fila_absoluta = int(round((burbuja.position.y - pos_y_fila_cero) / dist_y))
 	if fila_absoluta < 0: fila_absoluta = 0
@@ -219,7 +218,6 @@ func explotar_coincidencias(burbuja_inicial):
 	var a_revisar = [burbuja_inicial]
 	var color_buscado = burbuja_inicial.mi_color
 	var todas = get_tree().get_nodes_in_group("burbujas_fijas")
-	
 	var limite_distancia = (diametro_burbuja * 1.15)
 	var dist_sq = limite_distancia * limite_distancia
 
@@ -301,13 +299,11 @@ func agregar_nueva_fila_superior():
 	var dist_y = diametro_burbuja * 0.866
 	var radio = diametro_burbuja / 2.0
 	var todas = get_tree().get_nodes_in_group("burbujas_fijas")
-	
 	for b in todas: b.position.y += dist_y
 
 	techo_es_impar = !techo_es_impar
 	var num_columnas = columnas - 1 if techo_es_impar else columnas
 	var offset_x = radio if techo_es_impar else 0.0
-	
 	var colores_validos = []
 	if todas.size() == 0: colores_validos = colores 
 	else:
@@ -338,7 +334,7 @@ func actualizar_ui_timer():
 	var minutos: int = int(tiempo_restante / 60)
 	var segundos: int = int(tiempo_restante) % 60
 	if label_timer: 
-		label_timer.text = "TIME: %02d:%02d" % [minutos, segundos]
+		label_timer.text = "TIEMPO: %02d:%02d" % [minutos, segundos]
 		if tiempo_restante <= 10.0: label_timer.modulate = Color.RED
 		else: label_timer.modulate = Color.WHITE
 
@@ -352,7 +348,7 @@ func actualizar_ui_fallos():
 
 func sumar_puntos(cantidad: int):
 	puntaje += cantidad
-	label_score.text = "SCORE: " + str(puntaje)
+	label_score.text = "PUNTOS: " + str(puntaje)
 	var tween = create_tween() 
 	tween.tween_property(label_score, "scale", Vector2(1.5, 1.5), 0.1)
 	tween.tween_property(label_score, "scale", Vector2(1.0, 1.0), 0.15)
@@ -367,7 +363,6 @@ func mostrar_texto_flotante(posicion: Vector2, texto: String, color_texto: Color
 	label.position = posicion - Vector2(25, 20)
 	label.z_index = 50
 	add_child(label)
-	
 	var tween = create_tween()
 	tween.set_parallel(true) 
 	tween.tween_property(label, "position", label.position - Vector2(0, 60), 1.0).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
@@ -420,8 +415,8 @@ func mostrar_ui_leaderboard():
 	var texto_final = "TOP 5 JUGADORES\n\n"
 	for i in range(puntajes_guardados.size()):
 		var p = puntajes_guardados[i]
-		# Formato: 1. [Nombre] - 500 Pts (01:20s) - Fecha
-		texto_final += str(i+1) + ". " + str(p["nombre"]) + " | " + str(p["score"]) + " PTS | T: " + str(p["tiempo"]) + "s | " + str(p["fecha"]) + "\n"
+		# Usamos las claves en español: "nombre", "puntos", "tiempo"
+		texto_final += str(i+1) + ". " + str(p["nombre"]) + " | " + str(p["puntos"]) + " PTS | T: " + str(p["tiempo"]) + "s | " + str(p["fecha"]) + "\n"
 	
 	if label_leaderboard:
 		label_leaderboard.text = texto_final
@@ -434,12 +429,9 @@ func _on_boton_guardar_pressed():
 	var tiempo_usado = int(tiempo_maximo - tiempo_restante)
 	var fecha_dic = Time.get_datetime_dict_from_system()
 	
-	# --- NUEVO FORMATO DE FECHA (DD/MM/YYYY) ---
 	var dia = "%02d" % fecha_dic.day
 	var mes = "%02d" % fecha_dic.month
 	var anio = str(fecha_dic.year)
-	
-	# --- NUEVO FORMATO DE HORA (12HS AM/PM) ---
 	var hora_24 = fecha_dic.hour
 	var minuto = "%02d" % fecha_dic.minute
 	var am_pm = "AM"
@@ -447,29 +439,26 @@ func _on_boton_guardar_pressed():
 	
 	if hora_24 >= 12:
 		am_pm = "PM"
-		if hora_24 > 12:
-			hora_12 -= 12
-	if hora_12 == 0:
-		hora_12 = 12
-		
+		if hora_24 > 12: hora_12 -= 12
+	if hora_12 == 0: hora_12 = 12
 	var hora_str = "%02d" % hora_12
 	var fecha_str = dia + "/" + mes + "/" + anio + " " + hora_str + ":" + minuto + " " + am_pm
 	
-	# Guardamos en la lista
+	# Guardamos con claves en ESPAÑOL
 	puntajes_guardados.append({
 		"nombre": nombre,
-		"score": puntaje,
+		"puntos": puntaje,
 		"tiempo": tiempo_usado,
 		"fecha": fecha_str
 	})
 	
-	# Ordenamos: Primero por Score más alto. Si empatan, por menos Tiempo.
+	# Ordenamos usando claves en ESPAÑOL y acceso por corchetes para mayor seguridad
 	puntajes_guardados.sort_custom(func(a, b): 
-		if a.score != b.score: return a.score > b.score
-		return a.tiempo < b.tiempo
+		if a["puntos"] != b["puntos"]: 
+			return a["puntos"] > b["puntos"]
+		return a["tiempo"] < b["tiempo"]
 	)
 	
-	# Solo guardamos el Top 5
 	if puntajes_guardados.size() > 5: puntajes_guardados.resize(5)
 	
 	guardar_leaderboard()
@@ -481,8 +470,8 @@ func _on_boton_guardar_pressed():
 
 func animar_victoria():
 	juego_activo = false 
-	burbuja_cargada.hide()
-	burbuja_siguiente.hide()
+	if burbuja_cargada: burbuja_cargada.hide()
+	if burbuja_siguiente: burbuja_siguiente.hide()
 	
 	var puntos_bonus = int(tiempo_restante) * 10 
 	sumar_puntos(puntos_bonus)
@@ -494,7 +483,6 @@ func animar_victoria():
 		
 	await get_tree().create_timer(1.0).timeout 
 	
-	# Mostramos caja de texto para poner el nombre (Escondemos Reintentar)
 	if input_nombre: input_nombre.show()
 	if boton_guardar: boton_guardar.show()
 	if boton_reintentar: boton_reintentar.hide()
@@ -504,8 +492,8 @@ func animar_victoria():
 
 func animar_game_over():
 	juego_activo = false 
-	burbuja_cargada.hide()
-	burbuja_siguiente.hide()
+	if burbuja_cargada: burbuja_cargada.hide()
+	if burbuja_siguiente: burbuja_siguiente.hide()
 	
 	if label_titulo_ui:
 		if tiempo_restante <= 0.0: label_titulo_ui.text = "¡TIEMPO AGOTADO!"
@@ -525,7 +513,6 @@ func animar_game_over():
 		
 	await get_tree().create_timer(0.5).timeout
 	
-	# Como perdió, no lo dejamos escribir el nombre. Le mostramos directo los puntajes
 	mostrar_ui_leaderboard()
 	capa_ui.show()
 	linea_guia.hide()
