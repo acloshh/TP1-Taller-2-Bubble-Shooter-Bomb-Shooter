@@ -3,7 +3,7 @@ extends Node2D
 # --- CONFIGURACIÓN ---
 @export var escena_burbuja: PackedScene
 @export var escena_explosion: PackedScene # <-- NUEVO: Arrastra aquí tu Explosion.tscn en el editor
-@export var filas: int = 0
+@export var filas: int = 7
 @export var columnas: int = 29
 @export var diametro_burbuja: float = 66
 @export var velocidad_disparo: float = 1300.0
@@ -419,7 +419,7 @@ func mostrar_ui_leaderboard():
 	var texto_final = "TOP 5 JUGADORES\n\n"
 	for i in range(puntajes_guardados.size()):
 		var p = puntajes_guardados[i]
-		texto_final += str(i+1) + ". " + str(p["nombre"]) + " | " + str(p["puntos"]) + " PTS | T: " + str(p["tiempo"]) + "s | " + str(p["fecha"]) + "\n"
+		texto_final += str(i+1) + ". " + str(p["nombre"]) + " | " + str(p["puntos"]) + " Pts | Tiempo: " + str(p["tiempo"]) + "s | " + str(p["fecha"]) + "\n"
 	
 	if label_leaderboard:
 		label_leaderboard.text = texto_final
