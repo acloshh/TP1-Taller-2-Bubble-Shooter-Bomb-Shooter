@@ -1,0 +1,84 @@
+[gd_scene format=3 uid="uid://cqecdtdgyag4k"]
+
+[ext_resource type="Script" uid="uid://bm8wfj25cvsmx" path="res://scripts/mundo.gd" id="1_cdbbl"]
+[ext_resource type="PackedScene" uid="uid://mndcy7iqiy1d" path="res://escenas/burbuja.tscn" id="2_6wjgb"]
+[ext_resource type="Texture2D" uid="uid://b38hy0g01ix17" path="res://assets/tirador/tirador.png" id="3_glrvs"]
+
+[sub_resource type="PhysicsMaterial" id="PhysicsMaterial_glrvs"]
+bounce = 0.64
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_v12yk"]
+size = Vector2(1923, 20)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_glrvs"]
+size = Vector2(20, 1090)
+
+[node name="Mundo" type="Node2D" unique_id=940022160]
+script = ExtResource("1_cdbbl")
+escena_burbuja = ExtResource("2_6wjgb")
+
+[node name="ContenedorBurbujas" type="Node2D" parent="." unique_id=803860091]
+
+[node name="Lanzador" type="Node2D" parent="." unique_id=1837856248]
+position = Vector2(960, 962)
+
+[node name="FondoLanzador" type="Sprite2D" parent="Lanzador" unique_id=959988321]
+scale = Vector2(0.8, 0.8)
+texture = ExtResource("3_glrvs")
+
+[node name="PosicionCarga" type="Marker2D" parent="Lanzador" unique_id=1792690267]
+position = Vector2(0, -56)
+
+[node name="PosicionSiguiente" type="Marker2D" parent="Lanzador" unique_id=1278528070]
+position = Vector2(57, 0)
+
+[node name="techo" type="StaticBody2D" parent="." unique_id=1879827710 groups=["techo"]]
+physics_material_override = SubResource("PhysicsMaterial_glrvs")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="techo" unique_id=669423928 groups=["techo"]]
+position = Vector2(961.5, -10)
+shape = SubResource("RectangleShape2D_v12yk")
+
+[node name="ParedIzq" type="StaticBody2D" parent="." unique_id=1001348260 groups=["paredes"]]
+
+[node name="CollisionShape2D2" type="CollisionShape2D" parent="ParedIzq" unique_id=1928037023 groups=["paredes"]]
+position = Vector2(-10, 535)
+shape = SubResource("RectangleShape2D_glrvs")
+
+[node name="CollisionShape2D3" type="CollisionShape2D" parent="ParedIzq" unique_id=1272802663 groups=["paredes"]]
+position = Vector2(1930, 535)
+shape = SubResource("RectangleShape2D_glrvs")
+
+[node name="LineaDerrota" type="ColorRect" parent="." unique_id=1957760419]
+offset_left = 3.0
+offset_top = 839.0
+offset_right = 1917.0
+offset_bottom = 840.0
+
+[node name="CapaUI" type="CanvasLayer" parent="." unique_id=505261560]
+visible = false
+
+[node name="ColorRect" type="ColorRect" parent="CapaUI" unique_id=986874281]
+offset_right = 1941.0
+offset_bottom = 1085.0
+color = Color(0.5286155, 0.51713336, 0.52835184, 1)
+
+[node name="Label" type="Label" parent="CapaUI/ColorRect" unique_id=635721505]
+layout_mode = 0
+offset_left = 864.0
+offset_top = 455.0
+offset_right = 1092.0
+offset_bottom = 508.0
+theme_override_font_sizes/font_size = 38
+text = "GAME OVER!"
+
+[node name="Button" type="Button" parent="CapaUI/ColorRect" unique_id=900330344]
+layout_mode = 0
+offset_left = 917.0
+offset_top = 564.0
+offset_right = 1070.0
+offset_bottom = 606.0
+theme_override_font_sizes/font_size = 24
+text = "REINTENTAR"
+
+[connection signal="pressed" from="CapaUI/ColorRect/Button" to="." method="_on_button_pressed"]

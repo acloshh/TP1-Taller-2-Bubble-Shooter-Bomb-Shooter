@@ -1,0 +1,249 @@
+[gd_scene format=3 uid="uid://cqecdtdgyag4k"]
+
+[ext_resource type="Script" uid="uid://bm8wfj25cvsmx" path="res://scripts/mundo.gd" id="1_cdbbl"]
+[ext_resource type="PackedScene" uid="uid://mndcy7iqiy1d" path="res://escenas/burbuja.tscn" id="2_6wjgb"]
+[ext_resource type="Texture2D" uid="uid://b38hy0g01ix17" path="res://assets/tirador/tirador.png" id="3_glrvs"]
+[ext_resource type="PackedScene" uid="uid://8xbmefug76hb" path="res://escenas/explosion.tscn" id="3_jcqeh"]
+[ext_resource type="Texture2D" uid="uid://dasc28abulor7" path="res://assets/background/Fondo.png" id="4_4vydk"]
+[ext_resource type="FontFile" uid="uid://b4ppkgqr8umxq" path="res://fonts/PirataOne-Regular.ttf" id="5_4vydk"]
+[ext_resource type="Texture2D" uid="uid://b8dx2jiwdumcc" path="res://assets/corazones/corazon lleno.png" id="5_7oex1"]
+[ext_resource type="Script" uid="uid://b7crov12fcqm2" path="res://scripts/recursos.gd" id="5_16hu1"]
+[ext_resource type="Texture2D" uid="uid://cf4mj7b8a4sy5" path="res://assets/background/Final.png" id="5_txhqv"]
+[ext_resource type="Script" uid="uid://cquirdx4oviq4" path="res://scripts/tutorial.gd" id="9_jh10v"]
+[ext_resource type="Texture2D" uid="uid://bkh2a2ye45v1w" path="res://assets/mouse/mouse movimiento.png" id="9_mb57o"]
+
+[sub_resource type="PhysicsMaterial" id="PhysicsMaterial_glrvs"]
+bounce = 0.64
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_v12yk"]
+size = Vector2(1923, 20)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_glrvs"]
+size = Vector2(20, 1090)
+
+[node name="Mundo" type="Node2D" unique_id=940022160]
+script = ExtResource("1_cdbbl")
+escena_burbuja = ExtResource("2_6wjgb")
+escena_explosion = ExtResource("3_jcqeh")
+metadata/_edit_horizontal_guides_ = [50.0, 0.0]
+
+[node name="Fondo" type="TextureRect" parent="." unique_id=1203357326]
+offset_right = 1920.0
+offset_bottom = 1080.0
+texture = ExtResource("4_4vydk")
+expand_mode = 1
+
+[node name="ContenedorBurbujas" type="Node2D" parent="." unique_id=803860091]
+
+[node name="Lanzador" type="Node2D" parent="." unique_id=1837856248]
+position = Vector2(960, 962)
+
+[node name="FondoLanzador" type="Sprite2D" parent="Lanzador" unique_id=959988321]
+scale = Vector2(0.8, 0.8)
+texture = ExtResource("3_glrvs")
+
+[node name="PosicionCarga" type="Marker2D" parent="Lanzador" unique_id=1792690267]
+position = Vector2(0, -56)
+
+[node name="PosicionSiguiente" type="Marker2D" parent="Lanzador" unique_id=1278528070]
+position = Vector2(57, 0)
+
+[node name="techo" type="StaticBody2D" parent="." unique_id=1879827710 groups=["techo"]]
+physics_material_override = SubResource("PhysicsMaterial_glrvs")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="techo" unique_id=669423928 groups=["techo"]]
+position = Vector2(960, 40)
+shape = SubResource("RectangleShape2D_v12yk")
+
+[node name="ParedIzq" type="StaticBody2D" parent="." unique_id=1001348260 groups=["paredes"]]
+
+[node name="CollisionShape2D2" type="CollisionShape2D" parent="ParedIzq" unique_id=1928037023 groups=["paredes"]]
+position = Vector2(-4, 535)
+shape = SubResource("RectangleShape2D_glrvs")
+
+[node name="CollisionShape2D3" type="CollisionShape2D" parent="ParedIzq" unique_id=1272802663 groups=["paredes"]]
+position = Vector2(1924, 535)
+shape = SubResource("RectangleShape2D_glrvs")
+
+[node name="LineaDerrota" type="ColorRect" parent="." unique_id=1957760419]
+offset_left = 1.0
+offset_top = 839.0
+offset_right = 1915.0
+offset_bottom = 840.0
+color = Color(0, 0, 0, 1)
+
+[node name="FinalNivel" type="CanvasLayer" parent="." unique_id=505261560]
+visible = false
+
+[node name="ColorRect" type="TextureRect" parent="FinalNivel" unique_id=874152623]
+offset_left = -12.0
+offset_top = -5.0
+offset_right = 1929.0
+offset_bottom = 1080.0
+texture = ExtResource("5_txhqv")
+
+[node name="LabelTitulo" type="Label" parent="FinalNivel/ColorRect" unique_id=398401554]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -114.0
+offset_top = -250.5
+offset_right = 114.0
+offset_bottom = -197.5
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_colors/font_color = Color(0, 0.5686275, 0.10980392, 1)
+theme_override_fonts/font = ExtResource("5_4vydk")
+theme_override_font_sizes/font_size = 38
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Button" type="Button" parent="FinalNivel/ColorRect" unique_id=900330344]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -76.5
+offset_top = 712.0
+offset_right = 76.5
+offset_bottom = 754.0
+grow_horizontal = 2
+theme_override_fonts/font = ExtResource("5_4vydk")
+theme_override_font_sizes/font_size = 24
+text = "REINTENTAR"
+
+[node name="InputNombre" type="LineEdit" parent="FinalNivel/ColorRect" unique_id=1722946220]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -113.5
+offset_top = 520.0
+offset_right = 113.5
+offset_bottom = 562.0
+grow_horizontal = 2
+theme_override_fonts/font = ExtResource("5_4vydk")
+theme_override_font_sizes/font_size = 24
+placeholder_text = "Escribe tu nombre..."
+
+[node name="BotonGuardar" type="Button" parent="FinalNivel/ColorRect" unique_id=1219524316]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -71.5
+offset_top = 568.0
+offset_right = 71.5
+offset_bottom = 608.0
+grow_horizontal = 2
+theme_override_fonts/font = ExtResource("5_4vydk")
+theme_override_font_sizes/font_size = 24
+text = "Guardar puntaje"
+
+[node name="LabelLeaderboard" type="Label" parent="FinalNivel/ColorRect" unique_id=1689625471]
+layout_mode = 0
+offset_left = 695.0
+offset_top = 358.0
+offset_right = 1365.0
+offset_bottom = 800.0
+theme_override_colors/font_color = Color(0, 0, 0, 1)
+theme_override_fonts/font = ExtResource("5_4vydk")
+theme_override_font_sizes/font_size = 34
+
+[node name="LineaGuia" type="Line2D" parent="." unique_id=427499844]
+z_index = 1
+width = 3.0
+default_color = Color(1, 1, 1, 0.7176471)
+
+[node name="UI" type="CanvasLayer" parent="." unique_id=2038924762]
+
+[node name="Tope" type="ColorRect" parent="UI" unique_id=597404320]
+offset_right = 1920.0
+offset_bottom = 50.0
+color = Color(0.68235296, 0.61960787, 0.42352942, 1)
+
+[node name="ContenedorCorazones" type="HBoxContainer" parent="UI" unique_id=720221421]
+offset_left = 888.0
+offset_top = -2.0
+offset_right = 1032.0
+offset_bottom = 62.0
+theme_override_constants/separation = -24
+
+[node name="TextureRect" type="TextureRect" parent="UI/ContenedorCorazones" unique_id=40282875]
+custom_minimum_size = Vector2(64, 64)
+layout_mode = 2
+texture = ExtResource("5_7oex1")
+expand_mode = 2
+stretch_mode = 5
+
+[node name="TextureRect2" type="TextureRect" parent="UI/ContenedorCorazones" unique_id=220177730]
+layout_mode = 2
+texture = ExtResource("5_7oex1")
+expand_mode = 2
+stretch_mode = 4
+
+[node name="TextureRect3" type="TextureRect" parent="UI/ContenedorCorazones" unique_id=998745499]
+layout_mode = 2
+texture = ExtResource("5_7oex1")
+expand_mode = 2
+stretch_mode = 4
+
+[node name="Recursos" type="Label" parent="UI" unique_id=374991014]
+visible = false
+offset_right = 40.0
+offset_bottom = 23.0
+script = ExtResource("5_16hu1")
+
+[node name="LabelScore" type="Label" parent="UI" unique_id=765659140]
+offset_left = 1703.0
+offset_top = 5.0
+offset_right = 1888.0
+offset_bottom = 55.0
+pivot_offset = Vector2(30.5, 11.5)
+theme_override_colors/font_color = Color(0, 0, 0, 1)
+theme_override_fonts/font = ExtResource("5_4vydk")
+theme_override_font_sizes/font_size = 36
+text = "PUNTOS: 0"
+
+[node name="LabelTimer" type="Label" parent="UI" unique_id=567662642]
+offset_left = 41.0
+offset_top = 5.0
+offset_right = 177.0
+offset_bottom = 55.0
+pivot_offset = Vector2(30.5, 11.5)
+theme_override_colors/font_color = Color(0, 0, 0, 1)
+theme_override_fonts/font = ExtResource("5_4vydk")
+theme_override_font_sizes/font_size = 36
+
+[node name="Tutorial" type="CanvasLayer" parent="." unique_id=2035698605]
+script = ExtResource("9_jh10v")
+
+[node name="ColorRect" type="ColorRect" parent="Tutorial" unique_id=1857572343]
+offset_right = 1920.0
+offset_bottom = 1080.0
+color = Color(0.4745098, 0.4745098, 0.4745098, 0.627451)
+
+[node name="ImagenMouse" type="TextureRect" parent="Tutorial" unique_id=763946287]
+offset_left = 920.0
+offset_top = 620.0
+offset_right = 1002.0
+offset_bottom = 738.0
+texture = ExtResource("9_mb57o")
+
+[node name="TextoTutorial" type="Label" parent="Tutorial" unique_id=436655629]
+offset_left = 866.0
+offset_top = 751.0
+offset_right = 1060.0
+offset_bottom = 844.0
+theme_override_colors/font_color = Color(0, 0, 0, 1)
+theme_override_fonts/font = ExtResource("5_4vydk")
+theme_override_font_sizes/font_size = 34
+text = "Mueve el mouse
+para APUNTAR"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[connection signal="pressed" from="FinalNivel/ColorRect/Button" to="." method="_on_button_pressed"]

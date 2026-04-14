@@ -1,0 +1,44 @@
+[gd_scene format=3 uid="uid://mndcy7iqiy1d"]
+
+[ext_resource type="Script" uid="uid://bt46f87sttew3" path="res://scripts/burbuja.gd" id="1_ka2ar"]
+[ext_resource type="Texture2D" uid="uid://c33rpvom7ikp0" path="res://assets/burbuja/mecha 1 (1).png" id="2_2hg7b"]
+[ext_resource type="Texture2D" uid="uid://bmm6f1pf3qvx" path="res://assets/burbuja/bomba sin mecha.png" id="2_ka2ar"]
+[ext_resource type="Texture2D" uid="uid://naugtb715dem" path="res://assets/burbuja/mecha 2 (1).png" id="3_v5skm"]
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_fi7e6"]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("2_2hg7b")
+}, {
+"duration": 1.0,
+"texture": ExtResource("3_v5skm")
+}],
+"loop": true,
+"name": &"new_animation",
+"speed": 12.0
+}]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_ka2ar"]
+radius = 23.086792
+
+[node name="Burbuja" type="CharacterBody2D" unique_id=812415674]
+script = ExtResource("1_ka2ar")
+
+[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="." unique_id=2076866242]
+z_index = 1
+position = Vector2(-4.7683716e-07, 0.040003)
+scale = Vector2(0.75, 0.751)
+sprite_frames = SubResource("SpriteFrames_fi7e6")
+animation = &"new_animation"
+autoplay = "new_animation"
+frame_progress = 0.670947
+offset = Vector2(0, -15)
+
+[node name="SpriteBase" type="Sprite2D" parent="." unique_id=1222807889]
+scale = Vector2(0.75, 0.75)
+texture = ExtResource("2_ka2ar")
+offset = Vector2(0, -16)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=341136077]
+shape = SubResource("CircleShape2D_ka2ar")
