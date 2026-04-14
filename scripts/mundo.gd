@@ -2,11 +2,12 @@ extends Node2D
 
 # --- CONFIGURACIÓN ---
 @export var escena_burbuja: PackedScene
-@export var filas: int = 0
+@export var escena_explosion: PackedScene # <-- NUEVO: Arrastra aquí tu Explosion.tscn en el editor
+@export var filas: int = 7
 @export var columnas: int = 30
-@export var diametro_burbuja: float = 64.0
+@export var diametro_burbuja: float = 66
 @export var velocidad_disparo: float = 1300.0
-@export var margen_top_ui: float = 50.0
+@export var margen_top_ui: float = 76
 @export var margen_lateral_ui: float = 6.0
 @export var tiempo_maximo: float = 600
 
@@ -16,18 +17,18 @@ extends Node2D
 @onready var pos_carga = $Lanzador/PosicionCarga
 @onready var pos_siguiente = $Lanzador/PosicionSiguiente
 @onready var linea_derrota = $LineaDerrota
-@onready var capa_ui = $CapaUI
-@onready var boton_reintentar = $CapaUI/ColorRect/Button
+@onready var capa_ui = $FinalNivel
+@onready var boton_reintentar = $FinalNivel/ColorRect/Button
 @onready var linea_guia = $LineaGuia
-@onready var label_score = $MonitorRendimiento/LabelScore
-@onready var label_timer = $MonitorRendimiento/LabelTimer 
-@onready var label_titulo_ui = $CapaUI/ColorRect/LabelTitulo
-@onready var contenedor_corazones = $MonitorRendimiento/ContenedorCorazones 
+@onready var label_score = $UI/LabelScore
+@onready var label_timer = $UI/LabelTimer 
+@onready var label_titulo_ui = $FinalNivel/ColorRect/LabelTitulo
+@onready var contenedor_corazones = $UI/ContenedorCorazones 
 
 # --- REFERENCIAS DEL LEADERBOARD ---
-@onready var input_nombre = $CapaUI/ColorRect/InputNombre
-@onready var boton_guardar = $CapaUI/ColorRect/BotonGuardar
-@onready var label_leaderboard = $CapaUI/ColorRect/LabelLeaderboard
+@onready var input_nombre = $FinalNivel/ColorRect/InputNombre
+@onready var boton_guardar = $FinalNivel/ColorRect/BotonGuardar
+@onready var label_leaderboard = $FinalNivel/ColorRect/LabelLeaderboard
 
 # --- VARIABLES DE ESTADO ---
 var burbuja_cargada: CharacterBody2D = null
@@ -36,6 +37,7 @@ var colores = [0, 1, 2, 3, 4, 5]
 var juego_activo: bool = true
 var puntaje: int = 0
 var tiempo_restante: float = 0.0 
+var cronometro_pausado: bool = true 
 
 # --- LEADERBOARD CONFIG ---
 const ARCHIVO_LEADERBOARD = "user://top_scores.json"
@@ -53,7 +55,7 @@ var techo_es_impar: bool = false
 
 func _ready():
 	var radio = diametro_burbuja / 2.0
-	var distancia_y = diametro_burbuja * 0.866
+	var distancia_y = diametro_burbuja * 0.90
 	
 	tiempo_restante = tiempo_maximo 
 	
@@ -66,6 +68,11 @@ func _ready():
 	
 	cargar_leaderboard()
 	
+	if has_node("Tutorial"):
+		$Tutorial.tutorial_completado.connect(_on_tutorial_completado)
+	else:
+		cronometro_pausado = false 
+	
 	generar_nivel(radio, distancia_y)
 	preparar_proyectiles()
 	actualizar_ui_fallos() 
@@ -73,13 +80,14 @@ func _ready():
 func _process(delta):
 	if not juego_activo: return 
 	
-	tiempo_restante -= delta
-	
-	if tiempo_restante <= 0.0:
-		tiempo_restante = 0.0
-		actualizar_ui_timer()
-		animar_game_over() 
-		return
+	if not cronometro_pausado:
+		tiempo_restante -= delta
+		
+		if tiempo_restante <= 0.0:
+			tiempo_restante = 0.0
+			actualizar_ui_timer()
+			animar_game_over() 
+			return
 		
 	actualizar_ui_timer()
 	dibujar_trayectoria() 
@@ -89,9 +97,71 @@ func _process(delta):
 	elif Input.is_action_just_pressed("swap"):
 		hacer_swap()
 
+func _on_tutorial_completado():
+	cronometro_pausado = false 
+
 
 # ==========================================
-# INICIALIZACIÓN (Sin cambios)
+# LÓGICA DE FÍSICAS Y EXPLOSIONES
+# ==========================================
+
+func explotar_coincidencias(burbuja_inicial):
+	var conectadas = {burbuja_inicial: true} 
+	var a_revisar = [burbuja_inicial]
+	var color_buscado = burbuja_inicial.mi_color
+	var todas = get_tree().get_nodes_in_group("burbujas_fijas")
+	var limite_distancia = (diametro_burbuja * 1.15)
+	var dist_sq = limite_distancia * limite_distancia
+
+	while a_revisar.size() > 0:
+		var actual = a_revisar.pop_back()
+		for otra in todas:
+			if otra.mi_color == color_buscado and not conectadas.has(otra):
+				if actual.global_position.distance_squared_to(otra.global_position) <= dist_sq:
+					conectadas[otra] = true
+					a_revisar.append(otra)
+
+	var array_conectadas = conectadas.keys()
+	if array_conectadas.size() >= 3:
+		var puntos_explosion = 50 + ((array_conectadas.size() - 3) * 25)
+		sumar_puntos(puntos_explosion)
+		
+		for i in range(array_conectadas.size()):
+			var b = array_conectadas[i]
+			
+			# --- INSTANCIAR EXPLOSIÓN DE PARTÍCULAS ---
+			if escena_explosion:
+				var explo = escena_explosion.instantiate()
+				explo.global_position = b.global_position
+				# Le pasamos el color del Sprite2D de la bomba a la explosión
+				if b.has_node("Sprite2D"):
+					explo.modulate = b.get_node("Sprite2D").modulate
+				add_child(explo)
+			
+			if i == 0: mostrar_texto_flotante(b.global_position, "+50", Color.YELLOW)
+			elif i >= 3: mostrar_texto_flotante(b.global_position, "+25", Color.CYAN)
+			
+			b.remove_from_group("burbujas_fijas")
+			b.queue_free()
+		
+		fallos_consecutivos = 0
+		actualizar_ui_fallos()
+		limpiar_huerfanas()
+		
+		if get_tree().get_nodes_in_group("burbujas_fijas").size() == 0:
+			animar_victoria()
+		else:
+			revisar_colores_proyectiles()
+	else:
+		fallos_consecutivos += 1
+		actualizar_ui_fallos()
+		if fallos_consecutivos >= MAX_FALLOS:
+			agregar_nueva_fila_superior()
+			fallos_consecutivos = 0 
+			actualizar_ui_fallos() 
+
+# ==========================================
+# RESTO DE FUNCIONES (Siguen igual)
 # ==========================================
 
 func generar_nivel(radio: float, dist_y: float):
@@ -121,11 +191,6 @@ func crear_burbuja_en_marcador(marcador: Marker2D) -> CharacterBody2D:
 	b.set_physics_process(false) 
 	b.get_node("CollisionShape2D").disabled = true 
 	return b
-
-
-# ==========================================
-# CONTROLES DEL JUGADOR
-# ==========================================
 
 func disparar():
 	if !burbuja_cargada: return
@@ -184,14 +249,9 @@ func dibujar_trayectoria():
 	else:
 		linea_guia.add_point(pos_inicio + (direccion * longitud_maxima))
 
-
-# ==========================================
-# LÓGICA DE FÍSICAS (Sin cambios)
-# ==========================================
-
 func encastrar_y_evaluar(burbuja):
 	var radio = diametro_burbuja / 2.0
-	var dist_y = diametro_burbuja * 0.866
+	var dist_y = diametro_burbuja * 0.90
 	var pos_y_fila_cero = radio + margen_top_ui 
 	var fila_absoluta = int(round((burbuja.position.y - pos_y_fila_cero) / dist_y))
 	if fila_absoluta < 0: fila_absoluta = 0
@@ -212,52 +272,6 @@ func encastrar_y_evaluar(burbuja):
 	burbuja.add_to_group("burbujas_fijas")
 	
 	explotar_coincidencias(burbuja)
-
-func explotar_coincidencias(burbuja_inicial):
-	var conectadas = {burbuja_inicial: true} 
-	var a_revisar = [burbuja_inicial]
-	var color_buscado = burbuja_inicial.mi_color
-	var todas = get_tree().get_nodes_in_group("burbujas_fijas")
-	var limite_distancia = (diametro_burbuja * 1.15)
-	var dist_sq = limite_distancia * limite_distancia
-
-	while a_revisar.size() > 0:
-		var actual = a_revisar.pop_back()
-		for otra in todas:
-			if otra.mi_color == color_buscado and not conectadas.has(otra):
-				if actual.global_position.distance_squared_to(otra.global_position) <= dist_sq:
-					conectadas[otra] = true
-					a_revisar.append(otra)
-
-	var array_conectadas = conectadas.keys()
-	if array_conectadas.size() >= 3:
-		var puntos_explosion = 50 + ((array_conectadas.size() - 3) * 25)
-		sumar_puntos(puntos_explosion)
-		
-		for i in range(array_conectadas.size()):
-			var b = array_conectadas[i]
-			if i == 0: mostrar_texto_flotante(b.global_position, "+50", Color.YELLOW)
-			elif i >= 3: mostrar_texto_flotante(b.global_position, "+25", Color.CYAN)
-		
-		for b in array_conectadas:
-			b.remove_from_group("burbujas_fijas")
-			b.queue_free()
-		
-		fallos_consecutivos = 0
-		actualizar_ui_fallos()
-		limpiar_huerfanas()
-		
-		if get_tree().get_nodes_in_group("burbujas_fijas").size() == 0:
-			animar_victoria()
-		else:
-			revisar_colores_proyectiles()
-	else:
-		fallos_consecutivos += 1
-		actualizar_ui_fallos()
-		if fallos_consecutivos >= MAX_FALLOS:
-			agregar_nueva_fila_superior()
-			fallos_consecutivos = 0 
-			actualizar_ui_fallos() 
 
 func limpiar_huerfanas():
 	var vivas = get_tree().get_nodes_in_group("burbujas_fijas")
@@ -325,11 +339,6 @@ func agregar_nueva_fila_superior():
 			animar_game_over()
 			break
 
-
-# ==========================================
-# UTILIDADES Y UI
-# ==========================================
-
 func actualizar_ui_timer():
 	var minutos: int = int(tiempo_restante / 60)
 	var segundos: int = int(tiempo_restante) % 60
@@ -390,11 +399,6 @@ func obtener_color_valido() -> int:
 func _on_button_pressed() -> void:
 	get_tree().reload_current_scene()
 
-
-# ==========================================
-# LEADERBOARD Y FIN DE PARTIDA
-# ==========================================
-
 func cargar_leaderboard():
 	if FileAccess.file_exists(ARCHIVO_LEADERBOARD):
 		var archivo = FileAccess.open(ARCHIVO_LEADERBOARD, FileAccess.READ)
@@ -415,7 +419,6 @@ func mostrar_ui_leaderboard():
 	var texto_final = "TOP 5 JUGADORES\n\n"
 	for i in range(puntajes_guardados.size()):
 		var p = puntajes_guardados[i]
-		# Usamos las claves en español: "nombre", "puntos", "tiempo"
 		texto_final += str(i+1) + ". " + str(p["nombre"]) + " | " + str(p["puntos"]) + " PTS | T: " + str(p["tiempo"]) + "s | " + str(p["fecha"]) + "\n"
 	
 	if label_leaderboard:
@@ -444,7 +447,6 @@ func _on_boton_guardar_pressed():
 	var hora_str = "%02d" % hora_12
 	var fecha_str = dia + "/" + mes + "/" + anio + " " + hora_str + ":" + minuto + " " + am_pm
 	
-	# Guardamos con claves en ESPAÑOL
 	puntajes_guardados.append({
 		"nombre": nombre,
 		"puntos": puntaje,
@@ -452,7 +454,6 @@ func _on_boton_guardar_pressed():
 		"fecha": fecha_str
 	})
 	
-	# Ordenamos usando claves en ESPAÑOL y acceso por corchetes para mayor seguridad
 	puntajes_guardados.sort_custom(func(a, b): 
 		if a["puntos"] != b["puntos"]: 
 			return a["puntos"] > b["puntos"]
