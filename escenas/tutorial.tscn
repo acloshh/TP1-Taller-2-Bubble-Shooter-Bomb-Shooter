@@ -1,0 +1,8 @@
+[gd_scene format=3 uid="uid://bpxyr2wxjmvre"]
+
+[node name="Tutorial" type="Node2D" unique_id=1155621629]
+
+[node name="TextureRect" type="ColorRect" parent="." unique_id=222001722]
+offset_right = 1920.0
+offset_bottom = 1080.0
+color = Color(0.011764706, 0.011764706, 0.011764706, 0.20784314)
