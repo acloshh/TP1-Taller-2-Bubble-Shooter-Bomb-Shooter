@@ -5,6 +5,7 @@ enum ColorBurbuja {ROJO, AZUL, VERDE, AMARILLO, ROSA, NARANJA}
 
 # 2. Variable exportada para elegir el color desde el panel derecho
 @export var mi_color: ColorBurbuja = ColorBurbuja.ROJO
+@onready var simbolo_daltonico = $SimboloDaltonico
 
 # 3. Nuestro diccionario de colores bien vibrantes
 var paleta = {
@@ -23,13 +24,17 @@ func _ready():
 	# Ni bien aparece en la pantalla, se pinta
 	asignar_color(mi_color)
 
-func asignar_color(nuevo_color):
-	mi_color = nuevo_color
+func asignar_color(nuevo_color_id):
+	mi_color = nuevo_color_id
+	$SpriteBase.modulate = paleta[mi_color] # Tu código actual
 	
-	# ¡ACÁ ESTÁ LA MAGIA!
-	# Solo teñimos la base blanca. El brillo queda intacto.
-	sprite_base.modulate = paleta[mi_color]
+	# Le asignamos el dibujito correspondiente
+	if texturas_simbolos.has(mi_color):
+		simbolo_daltonico.texture = texturas_simbolos[mi_color]
 
+# Esta función la llamaremos desde el Mundo
+func alternar_modo_daltonico(activado: bool):
+	simbolo_daltonico.visible = activado
 func _physics_process(delta):
 	var colision = move_and_collide(velocity * delta)
 	
@@ -48,3 +53,12 @@ func _physics_process(delta):
 			
 			# Le avisa al mundo que se pegó
 			get_parent().encastrar_y_evaluar(self)
+
+var texturas_simbolos = {
+	0: preload("res://assets/daltonicos/triangulo.png"),
+	1: preload("res://assets/daltonicos/cuadrado.png"),
+	2: preload("res://assets/daltonicos/rayo.png"),
+	3: preload("res://assets/daltonicos/circulo.png"),
+	4: preload("res://assets/daltonicos/corazon.png"),
+	5: preload("res://assets/daltonicos/estrella.png")
+}

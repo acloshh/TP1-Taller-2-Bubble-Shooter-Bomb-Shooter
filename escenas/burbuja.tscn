@@ -42,3 +42,6 @@ offset = Vector2(0, -16)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=341136077]
 shape = SubResource("CircleShape2D_ka2ar")
+
+[node name="SimboloDaltonico" type="Sprite2D" parent="." unique_id=1602064913]
+visible = false

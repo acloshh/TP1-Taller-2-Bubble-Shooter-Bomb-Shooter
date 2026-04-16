@@ -1,8 +1,12 @@
 extends Node2D
 
-# --- CONFIGURACIÓN ---
+# ==========================================
+# 1. CONFIGURACIÓN Y REFERENCIAS
+# ==========================================
+
+# --- CONFIGURACIÓN DEL NIVEL ---
 @export var escena_burbuja: PackedScene
-@export var escena_explosion: PackedScene # <-- NUEVO: Arrastra aquí tu Explosion.tscn en el editor
+@export var escena_explosion: PackedScene
 @export var filas: int = 7
 @export var columnas: int = 29
 @export var diametro_burbuja: float = 66
@@ -11,7 +15,7 @@ extends Node2D
 @export var margen_lateral_ui: float = 6.0
 @export var tiempo_maximo: float = 600
 
-# --- REFERENCIAS ---
+# --- REFERENCIAS A NODOS ---
 @onready var contenedor = $ContenedorBurbujas
 @onready var lanzador = $Lanzador
 @onready var pos_carga = $Lanzador/PosicionCarga
@@ -24,8 +28,6 @@ extends Node2D
 @onready var label_timer = $UI/LabelTimer 
 @onready var label_titulo_ui = $FinalNivel/ColorRect/LabelTitulo
 @onready var contenedor_corazones = $UI/ContenedorCorazones 
-
-# --- REFERENCIAS DEL LEADERBOARD ---
 @onready var input_nombre = $FinalNivel/ColorRect/InputNombre
 @onready var boton_guardar = $FinalNivel/ColorRect/BotonGuardar
 @onready var label_leaderboard = $FinalNivel/ColorRect/LabelLeaderboard
@@ -38,19 +40,18 @@ var juego_activo: bool = true
 var puntaje: int = 0
 var tiempo_restante: float = 0.0 
 var cronometro_pausado: bool = true 
-
-# --- LEADERBOARD CONFIG ---
-const ARCHIVO_LEADERBOARD = "user://top_scores.json"
-var puntajes_guardados = []
-
-# --- VARIABLES DE LÓGICA DE JUEGO ---
+var modo_daltonico_activo: bool = false 
 var fallos_consecutivos: int = 0
 const MAX_FALLOS: int = 3
 var techo_es_impar: bool = false
 
+# --- LEADERBOARD ---
+const ARCHIVO_LEADERBOARD = "user://top_scores.json"
+var puntajes_guardados = []
+
 
 # ==========================================
-# CICLO DE VIDA DEL NODO
+# 2. CICLO DE VIDA DEL JUEGO E INPUTS
 # ==========================================
 
 func _ready():
@@ -69,7 +70,7 @@ func _ready():
 	cargar_leaderboard()
 	
 	if has_node("Tutorial"):
-		$Tutorial.arrancar_reloj.connect(_on_arrancar_reloj) # <--- SEÑAL ACTUALIZADA
+		$Tutorial.arrancar_reloj.connect(_on_arrancar_reloj) 
 	else:
 		cronometro_pausado = false 
 	
@@ -82,7 +83,6 @@ func _process(delta):
 	
 	if not cronometro_pausado:
 		tiempo_restante -= delta
-		
 		if tiempo_restante <= 0.0:
 			tiempo_restante = 0.0
 			actualizar_ui_timer()
@@ -91,19 +91,44 @@ func _process(delta):
 		
 	actualizar_ui_timer()
 	dibujar_trayectoria() 
+
+# Usamos unhandled_input para que la UI (Botones) tenga prioridad sobre el clic
+func _unhandled_input(event):
+	if not juego_activo: return 
 	
-	if Input.is_action_just_pressed("click_izquierdo"):
+	if event.is_action_pressed("click_izquierdo"):
 		disparar()
-	elif Input.is_action_just_pressed("swap"):
+	elif event.is_action_pressed("swap"):
 		hacer_swap()
 
-func _on_arrancar_reloj(): # <--- NOMBRE DE FUNCIÓN ACTUALIZADO
-	cronometro_pausado = false 
-
 
 # ==========================================
-# LÓGICA DE FÍSICAS Y EXPLOSIONES
+# 3. LÓGICA DE FÍSICAS Y TABLERO
 # ==========================================
+
+func encastrar_y_evaluar(burbuja):
+	var radio = diametro_burbuja / 2.0
+	var dist_y = diametro_burbuja * 0.90
+	var pos_y_fila_cero = radio + margen_top_ui 
+	var fila_absoluta = int(round((burbuja.position.y - pos_y_fila_cero) / dist_y))
+	if fila_absoluta < 0: fila_absoluta = 0
+	
+	var es_impar = ((techo_es_impar as int + fila_absoluta) % 2) != 0
+	var offset_x = radio if es_impar else 0.0
+	var columna = int(round((burbuja.position.x - offset_x - radio - margen_lateral_ui) / diametro_burbuja))
+	
+	var max_columnas_en_esta_fila = (columnas - 1) if es_impar else columnas
+	if columna < 0: columna = 0 
+	elif columna >= max_columnas_en_esta_fila: columna = max_columnas_en_esta_fila - 1 
+	
+	var pos_final_x = (columna * diametro_burbuja) + offset_x + radio + margen_lateral_ui
+	burbuja.position = Vector2(pos_final_x, (fila_absoluta * dist_y) + pos_y_fila_cero)
+	
+	remove_child(burbuja)
+	contenedor.add_child(burbuja)
+	burbuja.add_to_group("burbujas_fijas")
+	
+	explotar_coincidencias(burbuja)
 
 func explotar_coincidencias(burbuja_inicial):
 	var conectadas = {burbuja_inicial: true} 
@@ -129,11 +154,9 @@ func explotar_coincidencias(burbuja_inicial):
 		for i in range(array_conectadas.size()):
 			var b = array_conectadas[i]
 			
-			# --- INSTANCIAR EXPLOSIÓN DE PARTÍCULAS ---
 			if escena_explosion:
 				var explo = escena_explosion.instantiate()
 				explo.global_position = b.global_position
-				# Le pasamos el color del Sprite2D de la bomba a la explosión
 				if b.has_node("Sprite2D"):
 					explo.modulate = b.get_node("Sprite2D").modulate
 				add_child(explo)
@@ -160,8 +183,45 @@ func explotar_coincidencias(burbuja_inicial):
 			fallos_consecutivos = 0 
 			actualizar_ui_fallos() 
 
+func limpiar_huerfanas():
+	var vivas = get_tree().get_nodes_in_group("burbujas_fijas")
+	if vivas.size() == 0: return
+	var conectadas_al_techo = {}
+	var a_revisar = []
+	var radio = diametro_burbuja / 2.0
+	var pos_y_fila_cero = radio + margen_top_ui
+
+	for b in vivas:
+		if b.global_position.y <= pos_y_fila_cero + 5.0:
+			conectadas_al_techo[b] = true
+			a_revisar.append(b)
+
+	var limite_distancia = (diametro_burbuja * 1.15)
+	var dist_sq = limite_distancia * limite_distancia
+
+	while a_revisar.size() > 0:
+		var actual = a_revisar.pop_back()
+		for otra in vivas:
+			if not conectadas_al_techo.has(otra):
+				if actual.global_position.distance_squared_to(otra.global_position) <= dist_sq:
+					conectadas_al_techo[otra] = true
+					a_revisar.append(otra)
+
+	for b in vivas:
+		if not conectadas_al_techo.has(b): hacer_caer(b)
+
+func hacer_caer(burbuja):
+	sumar_puntos(20) 
+	mostrar_texto_flotante(burbuja.global_position, "+20", Color.GREEN)
+	burbuja.remove_from_group("burbujas_fijas")
+	burbuja.get_node("CollisionShape2D").set_deferred("disabled", true)
+	var tween = create_tween()
+	tween.tween_property(burbuja, "global_position", burbuja.global_position + Vector2(0, 800), 1.0).set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
+	tween.tween_callback(burbuja.queue_free)
+
+
 # ==========================================
-# RESTO DE FUNCIONES (Siguen igual)
+# 4. SISTEMA DE GENERACIÓN Y DISPARO
 # ==========================================
 
 func generar_nivel(radio: float, dist_y: float):
@@ -190,6 +250,10 @@ func crear_burbuja_en_marcador(marcador: Marker2D) -> CharacterBody2D:
 	b.asignar_color(obtener_color_valido())
 	b.set_physics_process(false) 
 	b.get_node("CollisionShape2D").disabled = true 
+	
+	if b.has_method("alternar_modo_daltonico"):
+		b.alternar_modo_daltonico(modo_daltonico_activo)
+		
 	return b
 
 func disparar():
@@ -249,66 +313,6 @@ func dibujar_trayectoria():
 	else:
 		linea_guia.add_point(pos_inicio + (direccion * longitud_maxima))
 
-func encastrar_y_evaluar(burbuja):
-	var radio = diametro_burbuja / 2.0
-	var dist_y = diametro_burbuja * 0.90
-	var pos_y_fila_cero = radio + margen_top_ui 
-	var fila_absoluta = int(round((burbuja.position.y - pos_y_fila_cero) / dist_y))
-	if fila_absoluta < 0: fila_absoluta = 0
-	
-	var es_impar = ((techo_es_impar as int + fila_absoluta) % 2) != 0
-	var offset_x = radio if es_impar else 0.0
-	var columna = int(round((burbuja.position.x - offset_x - radio - margen_lateral_ui) / diametro_burbuja))
-	
-	var max_columnas_en_esta_fila = (columnas - 1) if es_impar else columnas
-	if columna < 0: columna = 0 
-	elif columna >= max_columnas_en_esta_fila: columna = max_columnas_en_esta_fila - 1 
-	
-	var pos_final_x = (columna * diametro_burbuja) + offset_x + radio + margen_lateral_ui
-	burbuja.position = Vector2(pos_final_x, (fila_absoluta * dist_y) + pos_y_fila_cero)
-	
-	remove_child(burbuja)
-	contenedor.add_child(burbuja)
-	burbuja.add_to_group("burbujas_fijas")
-	
-	explotar_coincidencias(burbuja)
-
-func limpiar_huerfanas():
-	var vivas = get_tree().get_nodes_in_group("burbujas_fijas")
-	if vivas.size() == 0: return
-	var conectadas_al_techo = {}
-	var a_revisar = []
-	var radio = diametro_burbuja / 2.0
-	var pos_y_fila_cero = radio + margen_top_ui
-
-	for b in vivas:
-		if b.global_position.y <= pos_y_fila_cero + 5.0:
-			conectadas_al_techo[b] = true
-			a_revisar.append(b)
-
-	var limite_distancia = (diametro_burbuja * 1.15)
-	var dist_sq = limite_distancia * limite_distancia
-
-	while a_revisar.size() > 0:
-		var actual = a_revisar.pop_back()
-		for otra in vivas:
-			if not conectadas_al_techo.has(otra):
-				if actual.global_position.distance_squared_to(otra.global_position) <= dist_sq:
-					conectadas_al_techo[otra] = true
-					a_revisar.append(otra)
-
-	for b in vivas:
-		if not conectadas_al_techo.has(b): hacer_caer(b)
-
-func hacer_caer(burbuja):
-	sumar_puntos(20) 
-	mostrar_texto_flotante(burbuja.global_position, "+20", Color.GREEN)
-	burbuja.remove_from_group("burbujas_fijas")
-	burbuja.get_node("CollisionShape2D").set_deferred("disabled", true)
-	var tween = create_tween()
-	tween.tween_property(burbuja, "global_position", burbuja.global_position + Vector2(0, 800), 1.0).set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
-	tween.tween_callback(burbuja.queue_free)
-
 func agregar_nueva_fila_superior():
 	var dist_y = diametro_burbuja * 0.866
 	var radio = diametro_burbuja / 2.0
@@ -332,12 +336,39 @@ func agregar_nueva_fila_superior():
 		b.position = Vector2(pos_final_x, radio + margen_top_ui)
 		b.asignar_color(colores_validos.pick_random())
 		b.set_physics_process(false)
+		
+		if b.has_method("alternar_modo_daltonico"):
+			b.alternar_modo_daltonico(modo_daltonico_activo)
+			
 		b.add_to_group("burbujas_fijas")
 	
 	for b in get_tree().get_nodes_in_group("burbujas_fijas"):
 		if (b.global_position.y + radio) >= linea_derrota.global_position.y: 
 			animar_game_over()
 			break
+
+func revisar_colores_proyectiles():
+	var vivas = get_tree().get_nodes_in_group("burbujas_fijas")
+	if vivas.size() == 0: return
+	var colores_presentes = {}
+	for b in vivas: colores_presentes[b.mi_color] = true
+	var colores_validos = colores_presentes.keys()
+	if burbuja_cargada and not colores_presentes.has(burbuja_cargada.mi_color):
+		burbuja_cargada.asignar_color(colores_validos.pick_random())
+	if burbuja_siguiente and not colores_presentes.has(burbuja_siguiente.mi_color):
+		burbuja_siguiente.asignar_color(colores_validos.pick_random())
+
+func obtener_color_valido() -> int:
+	var vivas = get_tree().get_nodes_in_group("burbujas_fijas")
+	if vivas.size() == 0: return colores.pick_random()
+	var colores_presentes = {}
+	for b in vivas: colores_presentes[b.mi_color] = true
+	return colores_presentes.keys().pick_random()
+
+
+# ==========================================
+# 5. ACTUALIZACIONES DE UI Y EFECTOS
+# ==========================================
 
 func actualizar_ui_timer():
 	var minutos: int = int(tiempo_restante / 60)
@@ -378,26 +409,10 @@ func mostrar_texto_flotante(posicion: Vector2, texto: String, color_texto: Color
 	tween.tween_property(label, "modulate:a", 0.0, 1.0).set_ease(Tween.EASE_IN)
 	tween.chain().tween_callback(label.queue_free)
 
-func revisar_colores_proyectiles():
-	var vivas = get_tree().get_nodes_in_group("burbujas_fijas")
-	if vivas.size() == 0: return
-	var colores_presentes = {}
-	for b in vivas: colores_presentes[b.mi_color] = true
-	var colores_validos = colores_presentes.keys()
-	if burbuja_cargada and not colores_presentes.has(burbuja_cargada.mi_color):
-		burbuja_cargada.asignar_color(colores_validos.pick_random())
-	if burbuja_siguiente and not colores_presentes.has(burbuja_siguiente.mi_color):
-		burbuja_siguiente.asignar_color(colores_validos.pick_random())
 
-func obtener_color_valido() -> int:
-	var vivas = get_tree().get_nodes_in_group("burbujas_fijas")
-	if vivas.size() == 0: return colores.pick_random()
-	var colores_presentes = {}
-	for b in vivas: colores_presentes[b.mi_color] = true
-	return colores_presentes.keys().pick_random()
-
-func _on_button_pressed() -> void:
-	get_tree().reload_current_scene()
+# ==========================================
+# 6. LEADERBOARD (PUNTAJES)
+# ==========================================
 
 func cargar_leaderboard():
 	if FileAccess.file_exists(ARCHIVO_LEADERBOARD):
@@ -425,49 +440,10 @@ func mostrar_ui_leaderboard():
 		label_leaderboard.text = texto_final
 		label_leaderboard.show()
 
-func _on_boton_guardar_pressed():
-	var nombre = input_nombre.text.strip_edges()
-	if nombre == "": nombre = "Anónimo"
-	
-	var tiempo_usado = int(tiempo_maximo - tiempo_restante)
-	var fecha_dic = Time.get_datetime_dict_from_system()
-	
-	var dia = "%02d" % fecha_dic.day
-	var mes = "%02d" % fecha_dic.month
-	var anio = str(fecha_dic.year)
-	var hora_24 = fecha_dic.hour
-	var minuto = "%02d" % fecha_dic.minute
-	var am_pm = "AM"
-	var hora_12 = hora_24
-	
-	if hora_24 >= 12:
-		am_pm = "PM"
-		if hora_24 > 12: hora_12 -= 12
-	if hora_12 == 0: hora_12 = 12
-	var hora_str = "%02d" % hora_12
-	var fecha_str = dia + "/" + mes + "/" + anio + " " + hora_str + ":" + minuto + " " + am_pm
-	
-	puntajes_guardados.append({
-		"nombre": nombre,
-		"puntos": puntaje,
-		"tiempo": tiempo_usado,
-		"fecha": fecha_str
-	})
-	
-	puntajes_guardados.sort_custom(func(a, b): 
-		if a["puntos"] != b["puntos"]: 
-			return a["puntos"] > b["puntos"]
-		return a["tiempo"] < b["tiempo"]
-	)
-	
-	if puntajes_guardados.size() > 5: puntajes_guardados.resize(5)
-	
-	guardar_leaderboard()
-	
-	input_nombre.hide()
-	boton_guardar.hide()
-	mostrar_ui_leaderboard()
-	boton_reintentar.show()
+
+# ==========================================
+# 7. ESTADOS DE FIN DE JUEGO
+# ==========================================
 
 func animar_victoria():
 	juego_activo = false 
@@ -517,3 +493,68 @@ func animar_game_over():
 	mostrar_ui_leaderboard()
 	capa_ui.show()
 	linea_guia.hide()
+
+
+# ==========================================
+# 8. SEÑALES Y BOTONES (EVENTOS)
+# ==========================================
+
+func _on_arrancar_reloj(): 
+	cronometro_pausado = false 
+
+func _on_modo_daltonico_toggled(toggled_on: bool) -> void:
+	modo_daltonico_activo = toggled_on 
+	
+	get_tree().call_group("burbujas_fijas", "alternar_modo_daltonico", toggled_on)
+	
+	if burbuja_cargada: 
+		burbuja_cargada.alternar_modo_daltonico(toggled_on)
+	if burbuja_siguiente: 
+		burbuja_siguiente.alternar_modo_daltonico(toggled_on)
+
+func _on_boton_guardar_pressed():
+	var nombre = input_nombre.text.strip_edges()
+	if nombre == "": nombre = "Anónimo"
+	
+	var tiempo_usado = int(tiempo_maximo - tiempo_restante)
+	var fecha_dic = Time.get_datetime_dict_from_system()
+	
+	var dia = "%02d" % fecha_dic.day
+	var mes = "%02d" % fecha_dic.month
+	var anio = str(fecha_dic.year)
+	var hora_24 = fecha_dic.hour
+	var minuto = "%02d" % fecha_dic.minute
+	var am_pm = "AM"
+	var hora_12 = hora_24
+	
+	if hora_24 >= 12:
+		am_pm = "PM"
+		if hora_24 > 12: hora_12 -= 12
+	if hora_12 == 0: hora_12 = 12
+	var hora_str = "%02d" % hora_12
+	var fecha_str = dia + "/" + mes + "/" + anio + " " + hora_str + ":" + minuto + " " + am_pm
+	
+	puntajes_guardados.append({
+		"nombre": nombre,
+		"puntos": puntaje,
+		"tiempo": tiempo_usado,
+		"fecha": fecha_str
+	})
+	
+	puntajes_guardados.sort_custom(func(a, b): 
+		if a["puntos"] != b["puntos"]: 
+			return a["puntos"] > b["puntos"]
+		return a["tiempo"] < b["tiempo"]
+	)
+	
+	if puntajes_guardados.size() > 5: puntajes_guardados.resize(5)
+	
+	guardar_leaderboard()
+	
+	input_nombre.hide()
+	boton_guardar.hide()
+	mostrar_ui_leaderboard()
+	boton_reintentar.show()
+
+func _on_button_pressed() -> void:
+	get_tree().reload_current_scene()
