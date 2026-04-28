@@ -1,0 +1,2 @@
+-  Mejorar la explosion, agregar humo o algo parecido
+-  Cambiar el sprite de la burbuja para que de mejor sensacion ¿3D? o que tenga mas profundidad
