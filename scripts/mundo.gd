@@ -69,8 +69,8 @@ func _ready():
 	
 	cargar_leaderboard()
 	
-	if has_node("Tutorial"):
-		$Tutorial.arrancar_reloj.connect(_on_arrancar_reloj) 
+	if has_node("UI/Tutorial"):
+		$UI/Tutorial.arrancar_reloj.connect(_on_arrancar_reloj) 
 	else:
 		cronometro_pausado = false 
 	
@@ -151,6 +151,9 @@ func explotar_coincidencias(burbuja_inicial):
 		var puntos_explosion = 50 + ((array_conectadas.size() - 3) * 25)
 		sumar_puntos(puntos_explosion)
 		
+		for b in array_conectadas:
+			b.remove_from_group("burbujas_fijas")
+			
 		for i in range(array_conectadas.size()):
 			var b = array_conectadas[i]
 			
@@ -164,8 +167,10 @@ func explotar_coincidencias(burbuja_inicial):
 			if i == 0: mostrar_texto_flotante(b.global_position, "+50", Color.YELLOW)
 			elif i >= 3: mostrar_texto_flotante(b.global_position, "+25", Color.CYAN)
 			
-			b.remove_from_group("burbujas_fijas")
+			b.hide()
 			b.queue_free()
+			
+			await get_tree().create_timer(0.05).timeout 
 		
 		fallos_consecutivos = 0
 		actualizar_ui_fallos()
@@ -456,7 +461,7 @@ func animar_victoria():
 	
 	if label_titulo_ui:
 		label_titulo_ui.text = "¡GANASTE!"
-		label_titulo_ui.modulate = Color.GREEN
+	label_titulo_ui.add_theme_color_override("font_color", Color.WEB_GREEN)
 		
 	await get_tree().create_timer(1.0).timeout 
 	
@@ -475,7 +480,7 @@ func animar_game_over():
 	if label_titulo_ui:
 		if tiempo_restante <= 0.0: label_titulo_ui.text = "¡TIEMPO AGOTADO!"
 		else: label_titulo_ui.text = "FIN DEL JUEGO"
-		label_titulo_ui.modulate = Color.RED 
+	label_titulo_ui.add_theme_color_override("font_color", Color.RED)
 	
 	var vivas = get_tree().get_nodes_in_group("burbujas_fijas")
 	vivas.sort_custom(func(a, b): return a.position.y > b.position.y)
@@ -488,7 +493,7 @@ func animar_game_over():
 				await get_tree().create_timer(0.1).timeout 
 			b.modulate = Color(0.3, 0.3, 0.3)
 		
-	await get_tree().create_timer(0.5).timeout
+	await get_tree().create_timer(0.7).timeout
 	
 	mostrar_ui_leaderboard()
 	capa_ui.show()
@@ -500,7 +505,7 @@ func animar_game_over():
 # ==========================================
 
 func _on_arrancar_reloj(): 
-	cronometro_pausado = false 
+	cronometro_pausado = false
 
 func _on_modo_daltonico_toggled(toggled_on: bool) -> void:
 	modo_daltonico_activo = toggled_on 
