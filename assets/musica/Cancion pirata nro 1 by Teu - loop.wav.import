@@ -1,0 +1,24 @@
+[remap]
+
+importer="wav"
+type="AudioStreamWAV"
+uid="uid://bnqch7qsw276p"
+path="res://.godot/imported/Cancion pirata nro 1 by Teu - loop.wav-b118ce96965d6fe2f3b9793476b68ea9.sample"
+
+[deps]
+
+source_file="res://assets/musica/Cancion pirata nro 1 by Teu - loop.wav"
+dest_files=["res://.godot/imported/Cancion pirata nro 1 by Teu - loop.wav-b118ce96965d6fe2f3b9793476b68ea9.sample"]
+
+[params]
+
+force/8_bit=false
+force/mono=false
+force/max_rate=false
+force/max_rate_hz=44100
+edit/trim=false
+edit/normalize=false
+edit/loop_mode=2
+edit/loop_begin=0
+edit/loop_end=-1
+compress/mode=2

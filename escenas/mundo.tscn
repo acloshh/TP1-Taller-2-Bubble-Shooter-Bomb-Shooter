@@ -11,6 +11,7 @@
 [ext_resource type="Texture2D" uid="uid://cf4mj7b8a4sy5" path="res://assets/background/Final.png" id="5_txhqv"]
 [ext_resource type="Script" uid="uid://cquirdx4oviq4" path="res://scripts/tutorial.gd" id="9_jh10v"]
 [ext_resource type="Texture2D" uid="uid://bkh2a2ye45v1w" path="res://assets/mouse/mouse movimiento.png" id="9_mb57o"]
+[ext_resource type="AudioStream" uid="uid://bnqch7qsw276p" path="res://assets/musica/Cancion pirata nro 1 by Teu - loop.wav" id="12_kckb2"]
 
 [sub_resource type="PhysicsMaterial" id="PhysicsMaterial_glrvs"]
 bounce = 0.64
@@ -255,6 +256,10 @@ offset_bottom = 808.0
 theme_override_colors/font_color = Color(0, 0, 0, 1)
 theme_override_fonts/font = ExtResource("5_4vydk")
 theme_override_font_sizes/font_size = 34
+
+[node name="musica_fondo" type="AudioStreamPlayer" parent="." unique_id=135032228]
+stream = ExtResource("12_kckb2")
+autoplay = true
 
 [connection signal="toggled" from="UI/ModoDaltonico" to="." method="_on_modo_daltonico_toggled"]
 [connection signal="pressed" from="FinalNivel/ColorRect/Button" to="." method="_on_button_pressed"]

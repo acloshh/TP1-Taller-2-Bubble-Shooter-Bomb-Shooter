@@ -49,6 +49,9 @@ var techo_es_impar: bool = false
 const ARCHIVO_LEADERBOARD = "user://top_scores.json"
 var puntajes_guardados = []
 
+# --- MUSICA ---
+@onready var musica_fondo = $musica_fondo
+
 
 # ==========================================
 # 2. CICLO DE VIDA DEL JUEGO E INPUTS
@@ -452,6 +455,8 @@ func mostrar_ui_leaderboard():
 
 func animar_victoria():
 	juego_activo = false 
+	if musica_fondo:
+		musica_fondo.stop()
 	if burbuja_cargada: burbuja_cargada.hide()
 	if burbuja_siguiente: burbuja_siguiente.hide()
 	
@@ -473,7 +478,7 @@ func animar_victoria():
 	linea_guia.hide()
 
 func animar_game_over():
-	juego_activo = false 
+	juego_activo = false
 	if burbuja_cargada: burbuja_cargada.hide()
 	if burbuja_siguiente: burbuja_siguiente.hide()
 	
