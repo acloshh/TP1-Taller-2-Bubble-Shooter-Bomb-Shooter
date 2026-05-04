@@ -12,6 +12,8 @@
 [ext_resource type="Script" uid="uid://cquirdx4oviq4" path="res://scripts/tutorial.gd" id="9_jh10v"]
 [ext_resource type="Texture2D" uid="uid://bkh2a2ye45v1w" path="res://assets/mouse/mouse movimiento.png" id="9_mb57o"]
 [ext_resource type="AudioStream" uid="uid://bnqch7qsw276p" path="res://assets/musica/Cancion pirata nro 1 by Teu - loop.wav" id="12_kckb2"]
+[ext_resource type="AudioStream" uid="uid://db578xrtp1e2d" path="res://assets/sonidos/victoria.wav" id="13_ijldy"]
+[ext_resource type="AudioStream" uid="uid://dkdk2bfiy31sw" path="res://assets/sonidos/derrota.wav" id="14_2q7jt"]
 
 [sub_resource type="PhysicsMaterial" id="PhysicsMaterial_glrvs"]
 bounce = 0.64
@@ -26,7 +28,8 @@ size = Vector2(20, 1090)
 script = ExtResource("1_cdbbl")
 escena_burbuja = ExtResource("2_6wjgb")
 escena_explosion = ExtResource("3_jcqeh")
-metadata/_edit_horizontal_guides_ = [50.0, 0.0]
+metadata/_edit_horizontal_guides_ = [50.0, 0.0, 404.0, 614.0, 445.0, 529.0, 6.6108704, 614.0]
+metadata/_edit_vertical_guides_ = [856.0, 1065.0, 960.0, 538.0]
 
 [node name="Fondo" type="TextureRect" parent="." unique_id=1203357326]
 offset_right = 1920.0
@@ -104,16 +107,22 @@ color = Color(0.4745098, 0.4745098, 0.4745098, 0.627451)
 
 [node name="ImagenMouse" type="TextureRect" parent="UI/Tutorial" unique_id=763946287]
 offset_left = 920.0
-offset_top = 620.0
+offset_top = 532.0
 offset_right = 1002.0
-offset_bottom = 738.0
+offset_bottom = 650.0
 texture = ExtResource("9_mb57o")
 
 [node name="TextoTutorial" type="Label" parent="UI/Tutorial" unique_id=436655629]
-offset_left = 866.0
-offset_top = 751.0
-offset_right = 1060.0
-offset_bottom = 844.0
+anchors_preset = 14
+anchor_top = 0.5
+anchor_right = 1.0
+anchor_bottom = 0.5
+offset_top = 108.5
+offset_bottom = 201.5
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_horizontal = 6
+size_flags_vertical = 6
 theme_override_colors/font_color = Color(0, 0, 0, 1)
 theme_override_fonts/font = ExtResource("5_4vydk")
 theme_override_font_sizes/font_size = 34
@@ -122,15 +131,68 @@ para APUNTAR"
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="ModoDaltonico" type="CheckBox" parent="UI" unique_id=2047302194]
-offset_left = 1.0
+[node name="BotonAjustes" type="Button" parent="UI" unique_id=244862342]
 offset_top = 1027.0
-offset_right = 210.0
+offset_right = 55.0
 offset_bottom = 1080.0
+theme_override_fonts/font = ExtResource("5_4vydk")
+theme_override_font_sizes/font_size = 34
+text = "⚙️"
+
+[node name="PanelAjustes" type="ColorRect" parent="UI" unique_id=2079848164]
+offset_left = 856.0
+offset_top = 404.0
+offset_right = 1066.0
+offset_bottom = 614.0
+color = Color(0.68235296, 0.61960787, 0.42352942, 1)
+
+[node name="ColorRect" type="ColorRect" parent="UI/PanelAjustes" unique_id=788384399]
+layout_mode = 0
+offset_right = 210.0
+offset_bottom = 41.0
+color = Color(0, 0, 0, 0.40784314)
+
+[node name="Label2" type="Label" parent="UI/PanelAjustes" unique_id=2109200060]
+layout_mode = 0
+offset_left = 53.0
+offset_right = 155.0
+offset_bottom = 45.0
+theme_override_colors/font_color = Color(0, 0, 0, 1)
+theme_override_fonts/font = ExtResource("5_4vydk")
+theme_override_font_sizes/font_size = 34
+text = "PAUSA"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="ModoDaltonico" type="CheckBox" parent="UI/PanelAjustes" unique_id=2047302194]
+layout_mode = 0
+offset_top = 143.0
+offset_right = 209.0
+offset_bottom = 196.0
 theme_override_colors/font_color = Color(0, 0, 0, 1)
 theme_override_fonts/font = ExtResource("5_4vydk")
 theme_override_font_sizes/font_size = 34
 text = "Modo Daltónico"
+
+[node name="SliderVolumen" type="HSlider" parent="UI/PanelAjustes" unique_id=1572019799]
+layout_mode = 0
+offset_left = 16.0
+offset_top = 108.0
+offset_right = 192.0
+offset_bottom = 124.0
+
+[node name="Label" type="Label" parent="UI/PanelAjustes" unique_id=1680494427]
+layout_mode = 0
+offset_left = 53.0
+offset_top = 68.0
+offset_right = 155.0
+offset_bottom = 113.0
+theme_override_colors/font_color = Color(0, 0, 0, 1)
+theme_override_fonts/font = ExtResource("5_4vydk")
+theme_override_font_sizes/font_size = 34
+text = "Volumen"
+horizontal_alignment = 1
+vertical_alignment = 1
 
 [node name="ContenedorBurbujas" type="Node2D" parent="." unique_id=803860091]
 
@@ -145,7 +207,7 @@ texture = ExtResource("3_glrvs")
 position = Vector2(0, -56)
 
 [node name="PosicionSiguiente" type="Marker2D" parent="Lanzador" unique_id=1278528070]
-position = Vector2(57, 0)
+position = Vector2(0, 62)
 
 [node name="techo" type="StaticBody2D" parent="." unique_id=1879827710 groups=["techo"]]
 physics_material_override = SubResource("PhysicsMaterial_glrvs")
@@ -262,5 +324,15 @@ stream = ExtResource("12_kckb2")
 volume_db = -20.0
 autoplay = true
 
-[connection signal="toggled" from="UI/ModoDaltonico" to="." method="_on_modo_daltonico_toggled"]
+[node name="sonido_victoria" type="AudioStreamPlayer" parent="." unique_id=62677807]
+stream = ExtResource("13_ijldy")
+volume_db = -10.0
+
+[node name="sonido_derrota" type="AudioStreamPlayer" parent="." unique_id=184155059]
+stream = ExtResource("14_2q7jt")
+volume_db = -4.0
+
+[connection signal="pressed" from="UI/BotonAjustes" to="." method="_on_boton_ajustes_pressed"]
+[connection signal="toggled" from="UI/PanelAjustes/ModoDaltonico" to="." method="_on_modo_daltonico_toggled"]
+[connection signal="value_changed" from="UI/PanelAjustes/SliderVolumen" to="." method="_on_slider_volumen_value_changed"]
 [connection signal="pressed" from="FinalNivel/ColorRect/Button" to="." method="_on_button_pressed"]

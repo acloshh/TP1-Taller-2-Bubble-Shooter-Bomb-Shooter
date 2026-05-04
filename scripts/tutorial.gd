@@ -32,12 +32,12 @@ func iniciar_paso_3():
 	paso_actual = 3
 	texto_instruccion.text = "Haz clic derecho\npara CAMBIAR BOMBA"
 	imagen_mouse.texture = icono_clic_derecho 
-	arrancar_reloj.emit() # <--- 2. ¡EL RELOJ ARRANCA ACÁ! Justo después de disparar.
+	arrancar_reloj.emit()
 
 func finalizar_tutorial():
 	paso_actual = 4
 	hide() 
-	# <--- 3. Acá ya no emitimos nada, solo cerramos el tutorial.
+
 
 
 func _input(event):

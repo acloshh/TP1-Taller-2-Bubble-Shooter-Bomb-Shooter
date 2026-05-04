@@ -1,0 +1,18 @@
+Assets
+	Bomba, Mecha: Emilia Lombardo.
+	Background: Emilia Lombardo.
+	Final: Emilia Lombardo.
+	Icono: Emilia Lombardo.
+
+Música
+	Tesoro en el atlántico (Game Theme) - Teu Glaría.
+
+
+Institución
+	
+	Universidad Nacional de Rafaela, juego desarrollado para la cátedra Taller de Producción de juegos 2, 2do Año.
+	
+	Profesores Sebastián Nazzeta, Diego Porello.
+
+
+Juego desarrollado por Santiago Tornau.

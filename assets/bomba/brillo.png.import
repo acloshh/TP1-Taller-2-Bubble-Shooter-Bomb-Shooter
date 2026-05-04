@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://c33rpvom7ikp0"
-path="res://.godot/imported/mecha 1 (1).png-3b4d12068515eb5d272da19cb871d35b.ctex"
+uid="uid://bl7rhogocwcyd"
+path="res://.godot/imported/brillo.png-d09d9a70b16d4c2780420a9896a7f879.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/burbuja/mecha 1 (1).png"
-dest_files=["res://.godot/imported/mecha 1 (1).png-3b4d12068515eb5d272da19cb871d35b.ctex"]
+source_file="res://assets/bomba/brillo.png"
+dest_files=["res://.godot/imported/brillo.png-d09d9a70b16d4c2780420a9896a7f879.ctex"]
 
 [params]
 

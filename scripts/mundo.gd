@@ -32,6 +32,11 @@ extends Node2D
 @onready var input_nombre = $FinalNivel/ColorRect/InputNombre
 @onready var boton_guardar = $FinalNivel/ColorRect/BotonGuardar
 @onready var label_leaderboard = $FinalNivel/ColorRect/LabelLeaderboard
+@onready var panel_ajustes = $UI/PanelAjustes
+@onready var boton_ajustes = $UI/BotonAjustes
+@onready var slider_volumen = $UI/PanelAjustes/SliderVolumen
+@onready var sonido_victoria = $sonido_victoria
+@onready var sonido_derrota = $sonido_derrota
 
 # --- VARIABLES DE ESTADO ---
 var burbuja_cargada: CharacterBody2D = null
@@ -52,6 +57,8 @@ var puntajes_guardados = []
 
 # --- MUSICA ---
 @onready var musica_fondo = $musica_fondo
+
+
 
 
 # ==========================================
@@ -81,6 +88,19 @@ func _ready():
 	generar_nivel(radio, distancia_y)
 	preparar_proyectiles()
 	actualizar_ui_fallos() 
+	
+	if panel_ajustes:
+		panel_ajustes.hide()
+	
+	if slider_volumen:
+		slider_volumen.min_value = 0.0001
+		slider_volumen.max_value = 1.0
+		slider_volumen.step = 0.01
+		slider_volumen.value = db_to_linear(AudioServer.get_bus_volume_db(0))
+		
+		var volumen_inicial = 0.70
+		slider_volumen.value = volumen_inicial
+		AudioServer.set_bus_volume_db(0, linear_to_db(volumen_inicial))
 
 func _process(delta):
 	if not juego_activo: return 
@@ -99,11 +119,14 @@ func _process(delta):
 func _unhandled_input(event):
 	if not juego_activo: return 
 	
+	if panel_ajustes and panel_ajustes.visible:
+		return
+	# ----------------------------------------
+	
 	if event.is_action_pressed("click_izquierdo"):
 		disparar()
 	elif event.is_action_pressed("swap"):
 		hacer_swap()
-
 
 # ==========================================
 # 3. LÓGICA DE FÍSICAS Y TABLERO
@@ -207,12 +230,11 @@ func explotar_bomba_area(burbuja_central):
 	var todas = get_tree().get_nodes_in_group("burbujas_fijas")
 	var dist_sq = (diametro_burbuja * 1.15) * (diametro_burbuja * 1.15)
 	
-	var pos_y_fila_cero = (diametro_burbuja / 2.0) + margen_top_ui
-	
 	for otra in todas:
+		# Chequeamos si está dentro del radio de explosión
 		if otra != burbuja_central and burbuja_central.global_position.distance_squared_to(otra.global_position) <= dist_sq:
-			if otra.global_position.y > pos_y_fila_cero + 5.0:
-				a_destruir.append(otra)
+			# ¡Acá ya no hay barreras invisibles! Entra todo a la lista de destrucción
+			a_destruir.append(otra)
 			
 	ejecutar_destruccion_poder(a_destruir, "¡BOMBA!")
 
@@ -221,15 +243,12 @@ func explotar_bomba_diagonal(burbuja_central):
 	var todas = get_tree().get_nodes_in_group("burbujas_fijas")
 	var margen = diametro_burbuja * 0.4 
 	
-	var pos_y_fila_cero = (diametro_burbuja / 2.0) + margen_top_ui
 	var cx = burbuja_central.global_position.x
 	var cy = burbuja_central.global_position.y
 	
-	# 1. Calculamos el centro y qué tan cerca estamos de él
 	var mitad_tablero = margen_lateral_ui + (columnas * diametro_burbuja) / 2.0
 	var distancia_al_centro = abs(cx - mitad_tablero)
 	
-	# Le damos un pequeño "margen de tolerancia" (el ancho de una burbuja)
 	var es_centro_exacto = distancia_al_centro <= (diametro_burbuja / 2.0)
 	var es_mitad_izquierda = cx < mitad_tablero
 	
@@ -238,15 +257,12 @@ func explotar_bomba_diagonal(burbuja_central):
 			var ox = otra.global_position.x
 			var oy = otra.global_position.y
 			
-			# Calculamos AMBAS diagonales
 			var dist_diag_izq = abs(1.8 * ox - oy - 1.8 * cx + cy) / 2.059
 			var dist_diag_der = abs(1.8 * ox + oy - 1.8 * cx - cy) / 2.059
 			
 			var en_rango = false
 			
-			# 2. Elegimos la destrucción según la zona de impacto
 			if es_centro_exacto:
-				# ¡BONUS OCULTO! Si pega justo en el medio, hace la X
 				en_rango = (dist_diag_izq <= margen) or (dist_diag_der <= margen)
 			elif es_mitad_izquierda:
 				en_rango = (dist_diag_izq <= margen)
@@ -254,17 +270,14 @@ func explotar_bomba_diagonal(burbuja_central):
 				en_rango = (dist_diag_der <= margen)
 			
 			if en_rango:
-				if otra.global_position.y > pos_y_fila_cero + 5.0:
-					a_destruir.append(otra)
+				a_destruir.append(otra)
 	
-	# 3. Textos dinámicos para recompensar al jugador
+	# --- TEXTOS ACTUALIZADOS ---
 	var texto_impacto = ""
 	if es_centro_exacto:
-		texto_impacto = "¡X-PLOSION!"
-	elif es_mitad_izquierda:
-		texto_impacto = "¡BOMBA DIAGONAL!"
+		texto_impacto = "X-PLOSION"
 	else:
-		texto_impacto = "¡BOMBA DIAGONAL!"
+		texto_impacto = "BOMBA DIAGONAL"
 		
 	ejecutar_destruccion_poder(a_destruir, texto_impacto)
 
@@ -388,13 +401,18 @@ func crear_burbuja_en_marcador(marcador: Marker2D) -> CharacterBody2D:
 
 func disparar():
 	if !burbuja_cargada: return
+	
+	var pos_mouse = get_global_mouse_position()
+	if linea_derrota and pos_mouse.y > linea_derrota.global_position.y:
+		return
+	
 	var proyectil = burbuja_cargada
 	var pos_inicio = proyectil.global_position
 	pos_carga.remove_child(proyectil)
 	add_child(proyectil) 
 	proyectil.global_position = pos_inicio
 	
-	var direccion = (get_global_mouse_position() - pos_inicio).normalized()
+	var direccion = (pos_mouse - pos_inicio).normalized()
 	proyectil.velocity = direccion * velocidad_disparo
 	proyectil.set_physics_process(true)
 	proyectil.get_node("CollisionShape2D").disabled = false
@@ -415,8 +433,13 @@ func dibujar_trayectoria():
 	linea_guia.clear_points()
 	if not burbuja_cargada: return
 	
+	var pos_mouse = get_global_mouse_position()
+	
+	if linea_derrota and pos_mouse.y > linea_derrota.global_position.y:
+		return 
+		
 	var pos_inicio = pos_carga.global_position
-	var direccion = (get_global_mouse_position() - pos_inicio).normalized()
+	var direccion = (pos_mouse - pos_inicio).normalized()
 	linea_guia.add_point(pos_inicio)
 	
 	var espacio = get_world_2d().direct_space_state
@@ -579,8 +602,13 @@ func mostrar_ui_leaderboard():
 
 func animar_victoria():
 	juego_activo = false 
+	
+	sonido_victoria.play()
+	
 	if musica_fondo:
-		musica_fondo.stop()
+		musica_fondo.volume_db = -28.0
+
+	
 	if burbuja_cargada: burbuja_cargada.hide()
 	if burbuja_siguiente: burbuja_siguiente.hide()
 	
@@ -603,8 +631,12 @@ func animar_victoria():
 
 func animar_game_over():
 	juego_activo = false
+	
+	sonido_derrota.play()
+	
 	if musica_fondo:
-		musica_fondo.stop()
+		musica_fondo.volume_db = -28.0
+	
 	if burbuja_cargada: burbuja_cargada.hide()
 	if burbuja_siguiente: burbuja_siguiente.hide()
 	
@@ -629,7 +661,6 @@ func animar_game_over():
 	mostrar_ui_leaderboard()
 	capa_ui.show()
 	linea_guia.hide()
-
 
 # ==========================================
 # 10. SEÑALES Y BOTONES (EVENTOS)
@@ -694,3 +725,23 @@ func _on_boton_guardar_pressed():
 
 func _on_button_pressed() -> void:
 	get_tree().reload_current_scene()
+	
+	# --- MENÚ DE AJUSTES Y VOLUMEN ---
+
+func _on_boton_ajustes_pressed():
+	# Si ya ganaron o perdieron, el botón no hace nada
+	if not juego_activo: return 
+	
+	if panel_ajustes.visible:
+		panel_ajustes.hide()
+		cronometro_pausado = false # ¡El tiempo vuelve a correr!
+	else:
+		panel_ajustes.show()
+		cronometro_pausado = true # ¡Tiempo congelado!
+
+func _on_slider_volumen_value_changed(value: float):
+	# El bus '0' es el Master (Volumen General).
+	# Convertimos el valor lineal del slider (0.0 a 1.0) a decibeles
+	AudioServer.set_bus_volume_db(0, linear_to_db(value))
+	
+	
