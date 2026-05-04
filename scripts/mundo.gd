@@ -10,6 +10,7 @@ extends Node2D
 @export var filas: int = 7
 @export var columnas: int = 29
 @export var diametro_burbuja: float = 66
+
 @export var velocidad_disparo: float = 1300.0
 @export var margen_top_ui: float = 76
 @export var margen_lateral_ui: float = 6.0
@@ -95,7 +96,6 @@ func _process(delta):
 	actualizar_ui_timer()
 	dibujar_trayectoria() 
 
-# Usamos unhandled_input para que la UI (Botones) tenga prioridad sobre el clic
 func _unhandled_input(event):
 	if not juego_activo: return 
 	
@@ -131,7 +131,13 @@ func encastrar_y_evaluar(burbuja):
 	contenedor.add_child(burbuja)
 	burbuja.add_to_group("burbujas_fijas")
 	
-	explotar_coincidencias(burbuja)
+	# ---> INTERCEPTAMOS LOS POWER-UPS <---
+	if burbuja.mi_color == 10:
+		explotar_bomba_area(burbuja)
+	elif burbuja.mi_color == 11:
+		explotar_bomba_diagonal(burbuja)
+	else:
+		explotar_coincidencias(burbuja)
 
 func explotar_coincidencias(burbuja_inicial):
 	var conectadas = {burbuja_inicial: true} 
@@ -191,6 +197,112 @@ func explotar_coincidencias(burbuja_inicial):
 			fallos_consecutivos = 0 
 			actualizar_ui_fallos() 
 
+
+# ==========================================
+# 4. POWER UPS (BOMBA Y RAYO)
+# ==========================================
+
+func explotar_bomba_area(burbuja_central):
+	var a_destruir = [burbuja_central]
+	var todas = get_tree().get_nodes_in_group("burbujas_fijas")
+	var dist_sq = (diametro_burbuja * 1.15) * (diametro_burbuja * 1.15)
+	
+	var pos_y_fila_cero = (diametro_burbuja / 2.0) + margen_top_ui
+	
+	for otra in todas:
+		if otra != burbuja_central and burbuja_central.global_position.distance_squared_to(otra.global_position) <= dist_sq:
+			if otra.global_position.y > pos_y_fila_cero + 5.0:
+				a_destruir.append(otra)
+			
+	ejecutar_destruccion_poder(a_destruir, "¡BOMBA!")
+
+func explotar_bomba_diagonal(burbuja_central):
+	var a_destruir = [burbuja_central]
+	var todas = get_tree().get_nodes_in_group("burbujas_fijas")
+	var margen = diametro_burbuja * 0.4 
+	
+	var pos_y_fila_cero = (diametro_burbuja / 2.0) + margen_top_ui
+	var cx = burbuja_central.global_position.x
+	var cy = burbuja_central.global_position.y
+	
+	# 1. Calculamos el centro y qué tan cerca estamos de él
+	var mitad_tablero = margen_lateral_ui + (columnas * diametro_burbuja) / 2.0
+	var distancia_al_centro = abs(cx - mitad_tablero)
+	
+	# Le damos un pequeño "margen de tolerancia" (el ancho de una burbuja)
+	var es_centro_exacto = distancia_al_centro <= (diametro_burbuja / 2.0)
+	var es_mitad_izquierda = cx < mitad_tablero
+	
+	for otra in todas:
+		if otra != burbuja_central:
+			var ox = otra.global_position.x
+			var oy = otra.global_position.y
+			
+			# Calculamos AMBAS diagonales
+			var dist_diag_izq = abs(1.8 * ox - oy - 1.8 * cx + cy) / 2.059
+			var dist_diag_der = abs(1.8 * ox + oy - 1.8 * cx - cy) / 2.059
+			
+			var en_rango = false
+			
+			# 2. Elegimos la destrucción según la zona de impacto
+			if es_centro_exacto:
+				# ¡BONUS OCULTO! Si pega justo en el medio, hace la X
+				en_rango = (dist_diag_izq <= margen) or (dist_diag_der <= margen)
+			elif es_mitad_izquierda:
+				en_rango = (dist_diag_izq <= margen)
+			else:
+				en_rango = (dist_diag_der <= margen)
+			
+			if en_rango:
+				if otra.global_position.y > pos_y_fila_cero + 5.0:
+					a_destruir.append(otra)
+	
+	# 3. Textos dinámicos para recompensar al jugador
+	var texto_impacto = ""
+	if es_centro_exacto:
+		texto_impacto = "¡X-PLOSION!"
+	elif es_mitad_izquierda:
+		texto_impacto = "¡BOMBA DIAGONAL!"
+	else:
+		texto_impacto = "¡BOMBA DIAGONAL!"
+		
+	ejecutar_destruccion_poder(a_destruir, texto_impacto)
+
+func ejecutar_destruccion_poder(array_burbujas, texto_poder):
+	sumar_puntos(array_burbujas.size() * 50) 
+	
+	for b in array_burbujas:
+		b.remove_from_group("burbujas_fijas")
+		
+	for i in range(array_burbujas.size()):
+		var b = array_burbujas[i]
+		
+		if escena_explosion:
+			var explo = escena_explosion.instantiate()
+			explo.global_position = b.global_position
+			add_child(explo)
+			
+		if i == 0: 
+			mostrar_texto_flotante(b.global_position, texto_poder, Color.RED)
+			
+		b.hide()
+		b.queue_free()
+		await get_tree().create_timer(0.05).timeout 
+		
+	fallos_consecutivos = 0
+	actualizar_ui_fallos()
+	limpiar_huerfanas()
+	
+	if get_tree().get_nodes_in_group("burbujas_fijas").size() == 0:
+		animar_victoria()
+	else:
+		revisar_colores_proyectiles()
+
+
+# ==========================================
+# 5. SISTEMA DE CAÍDA (HUÉRFANAS)
+# ==========================================
+
 func limpiar_huerfanas():
 	var vivas = get_tree().get_nodes_in_group("burbujas_fijas")
 	if vivas.size() == 0: return
@@ -229,7 +341,7 @@ func hacer_caer(burbuja):
 
 
 # ==========================================
-# 4. SISTEMA DE GENERACIÓN Y DISPARO
+# 6. SISTEMA DE GENERACIÓN Y DISPARO
 # ==========================================
 
 func generar_nivel(radio: float, dist_y: float):
@@ -255,7 +367,17 @@ func crear_burbuja_en_marcador(marcador: Marker2D) -> CharacterBody2D:
 	var b = escena_burbuja.instantiate()
 	marcador.add_child(b)
 	b.position = Vector2.ZERO 
-	b.asignar_color(obtener_color_valido())
+	
+	# --- SISTEMA DE PROBABILIDAD DE PODERES ---
+	var suerte = randi() % 100
+	if suerte < 5: 
+		b.asignar_color(10)
+	elif suerte >= 5 and suerte < 10: 
+		b.asignar_color(11)
+	else: 
+		b.asignar_color(obtener_color_valido())
+	# ------------------------------------------
+	
 	b.set_physics_process(false) 
 	b.get_node("CollisionShape2D").disabled = true 
 	
@@ -361,9 +483,11 @@ func revisar_colores_proyectiles():
 	var colores_presentes = {}
 	for b in vivas: colores_presentes[b.mi_color] = true
 	var colores_validos = colores_presentes.keys()
-	if burbuja_cargada and not colores_presentes.has(burbuja_cargada.mi_color):
+	
+	# Evitamos que se reasignen colores a los poderes si cambias de bola
+	if burbuja_cargada and burbuja_cargada.mi_color < 10 and not colores_presentes.has(burbuja_cargada.mi_color):
 		burbuja_cargada.asignar_color(colores_validos.pick_random())
-	if burbuja_siguiente and not colores_presentes.has(burbuja_siguiente.mi_color):
+	if burbuja_siguiente and burbuja_siguiente.mi_color < 10 and not colores_presentes.has(burbuja_siguiente.mi_color):
 		burbuja_siguiente.asignar_color(colores_validos.pick_random())
 
 func obtener_color_valido() -> int:
@@ -375,7 +499,7 @@ func obtener_color_valido() -> int:
 
 
 # ==========================================
-# 5. ACTUALIZACIONES DE UI Y EFECTOS
+# 7. ACTUALIZACIONES DE UI Y EFECTOS
 # ==========================================
 
 func actualizar_ui_timer():
@@ -419,7 +543,7 @@ func mostrar_texto_flotante(posicion: Vector2, texto: String, color_texto: Color
 
 
 # ==========================================
-# 6. LEADERBOARD (PUNTAJES)
+# 8. LEADERBOARD (PUNTAJES)
 # ==========================================
 
 func cargar_leaderboard():
@@ -450,7 +574,7 @@ func mostrar_ui_leaderboard():
 
 
 # ==========================================
-# 7. ESTADOS DE FIN DE JUEGO
+# 9. ESTADOS DE FIN DE JUEGO
 # ==========================================
 
 func animar_victoria():
@@ -479,6 +603,8 @@ func animar_victoria():
 
 func animar_game_over():
 	juego_activo = false
+	if musica_fondo:
+		musica_fondo.stop()
 	if burbuja_cargada: burbuja_cargada.hide()
 	if burbuja_siguiente: burbuja_siguiente.hide()
 	
@@ -506,7 +632,7 @@ func animar_game_over():
 
 
 # ==========================================
-# 8. SEÑALES Y BOTONES (EVENTOS)
+# 10. SEÑALES Y BOTONES (EVENTOS)
 # ==========================================
 
 func _on_arrancar_reloj(): 
